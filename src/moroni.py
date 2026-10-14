@@ -1,527 +1,267 @@
+"""Finite-field polygon-guided textures. Analytical distance defines the method;
+hybrid LUT sampling is an approximation. Binning changes only candidate search.
+Real-arithmetic bounds and measured floating-point agreement are distinguished.
 """
-MORONI - controllable cellular texture synthesis.
-
-Cells are jittered roots of unity; a pixel is assigned to the cell minimising
-
-    E_c(x) = alpha*d_c + beta*d_edge_c(x) + gamma*(1 - cos(kappa*theta_c + lam*d_c))
-
-Three renderers, all producing identical labels for the same parameters:
-
-    render_reference  brute force over every cell. Slow, obviously correct.
-    render_pruned     admissible lower-bound pruning. Provably identical to
-                      reference; the bound is derived in prune_radius().
-    render_binned     lattice-binned candidates + algebraic phase. Fastest.
-
-The only approximation anywhere is the boundary-distance LUT, which is shared by
-all three, so they agree exactly with each other.
-"""
-from __future__ import annotations
-
 from dataclasses import dataclass
-
 import numpy as np
 
-__all__ = [
-    "CellField", "make_cells", "grid", "prune_radius",
-    "render_reference", "render_pruned", "render_binned", "BinnedRenderer",
-    "apply_margin", "shape_fidelity",
-    "soften", "voronoi_kdtree", "boundary_density", "colorize",
-]
-
-F32 = np.float32
+__all__ = ['CellField','make_cells','grid','render_reference','render_pruned',
+           'render_binned','BinnedRenderer','apply_margin','shape_fidelity',
+           'voronoi_kdtree','colorize','boundary_density','geometry_metrics']
+BACKGROUND = -1
 
 
-# --------------------------------------------------------------------- geometry
+def _prng(seed):
+    """Mulberry32, shared with JavaScript, with explicit unsigned overflow."""
+    s = int(seed) & 0xffffffff
+    def draw():
+        nonlocal s
+        s = (s + 0x6D2B79F5) & 0xffffffff
+        t = ((s ^ (s >> 15)) * (1 | s)) & 0xffffffff
+        t = ((t + (((t ^ (t >> 7)) * (61 | t)) & 0xffffffff)) & 0xffffffff) ^ t
+        return ((t ^ (t >> 14)) & 0xffffffff) / 4294967296
+    return draw
+
+
 @dataclass
 class CellField:
-    """Cells on a jittered lattice, plus their boundary-distance LUTs."""
-    centers: np.ndarray       # (N,2) f32
-    polys: list[np.ndarray]   # N polygons, (n_c,2)
-    lattice: np.ndarray       # (N,2) int, lattice coordinate of each cell
-    luts: np.ndarray          # (N,L,L) f32 SIGNED boundary distance, local frame
-    lut_radius: np.ndarray    # (N,) f32 half-extent of each LUT frame
-    lut_depth: np.ndarray     # (N,) f32 max inward depth, i.e. -min(lut) >= 0
+    centers: np.ndarray
+    polys: list
+    lattice: np.ndarray
+    luts: np.ndarray
+    lut_radius: np.ndarray
+    radii: np.ndarray
     rows: int
     cols: int
     spacing: float
 
     @property
-    def n(self) -> int:
-        return len(self.centers)
-
+    def n(self): return len(self.centers)
     @property
-    def bbox(self) -> tuple[float, float, float, float]:
-        return (-0.8, self.cols * self.spacing, -0.8, self.rows * self.spacing)
+    def bbox(self):
+        s = self.spacing
+        return (-s/2, (self.cols-.5)*s, -s/2, (self.rows-.5)*s)
+    @property
+    def lut_depth(self): return np.maximum(-self.luts.min(axis=(1, 2)), 0)
+    @property
+    def lut_error(self): return np.sqrt(2)*self.lut_radius/(self.luts.shape[-1]-1)
 
 
-def _root_polygon(center, n, r, jitter, rng):
-    k = np.arange(n)
-    th = 2 * np.pi * k / n + rng.uniform(-jitter, jitter, n)
-    z = r * np.exp(1j * th)
-    return np.c_[z.real, z.imag] + center
+def _signed_distance(x, y, poly):
+    x,y = np.broadcast_arrays(np.asarray(x,float),np.asarray(y,float))
+    distance = np.full(x.shape,np.inf)
+    inside = np.zeros(x.shape,bool)
+    for a,b in zip(poly,np.roll(poly,-1,axis=0)):
+        vx,vy = b-a
+        t = np.clip(((x-a[0])*vx+(y-a[1])*vy)/max(vx*vx+vy*vy,1e-300),0,1)
+        distance = np.minimum(distance,np.hypot(x-a[0]-t*vx,y-a[1]-t*vy))
+        if vy != 0:
+            inside ^= ((a[1]>y)!=(b[1]>y)) & (x<a[0]+(y-a[1])*vx/vy)
+    return np.where(inside,-distance,distance)
 
 
-def _signed_distance(xv, yv, poly):
-    """
-    Signed distance to the polygon: negative inside, positive outside.
-
-    The sign matters. With an unsigned distance the boundary term is minimised
-    *on the outline*, so it carves rings and the polygon's shape never reaches the
-    cell. Signed, it is minimised at the polygon's medial axis, so raising beta
-    pulls the cell onto the polygon silhouette -- which is what makes vertex count
-    an actual artist control.
-    """
-    from matplotlib.path import Path as MplPath
-    dmin = np.full(xv.shape, np.inf, dtype=F32)
-    for i in range(len(poly)):
-        a, b = poly[i], poly[(i + 1) % len(poly)]
-        v = b - a
-        wx, wy = xv - a[0], yv - a[1]
-        t = np.clip((wx * v[0] + wy * v[1]) / (v @ v + 1e-12), 0.0, 1.0)
-        dmin = np.minimum(dmin, np.hypot(xv - (a[0] + t * v[0]),
-                                         yv - (a[1] + t * v[1])))
-    inside = MplPath(poly).contains_points(
-        np.column_stack([xv.ravel(), yv.ravel()])).reshape(xv.shape)
-    return np.where(inside, -dmin, dmin).astype(F32)
-
-
-def make_cells(rows=8, cols=12, spacing=0.9, radius=0.5, jitter=0.35,
-               seed=22, lut_size=72, sides=(5, 9)) -> CellField:
-    rng = np.random.default_rng(seed)
-    centers, polys, lattice = [], [], []
-    for r in range(rows):
-        for c in range(cols):
-            ctr = np.array([c * spacing + rng.uniform(-0.13, 0.13) * spacing,
-                            r * spacing + rng.uniform(-0.13, 0.13) * spacing])
-            poly = _root_polygon(ctr, int(rng.integers(*sides)),
-                                 radius * rng.uniform(0.9, 1.1), jitter, rng)
-            centers.append(ctr); polys.append(poly); lattice.append((r, c))
-
-    luts, radii = [], []
-    for p, c in zip(polys, centers):
-        q = p - c
-        rr = float(np.max(np.linalg.norm(q, axis=1)) * 1.5)
-        ax = np.linspace(-rr, rr, lut_size, dtype=F32)
-        xv, yv = np.meshgrid(ax, ax)
-        luts.append(_signed_distance(xv, yv, q.astype(F32)))
-        radii.append(rr)
-
-    L = np.stack(luts).astype(F32)
-    return CellField(np.asarray(centers, F32), polys, np.asarray(lattice, int),
-                     L, np.asarray(radii, F32),
-                     np.maximum(-L.reshape(len(L), -1).min(1), 0).astype(F32),
-                     rows, cols, spacing)
+def make_cells(rows=8,cols=12,spacing=.9,radius=.5,jitter=.35,
+               seed=22,lut_size=72,sides=(5,9)):
+    if (rows<1 or cols<1 or spacing<=0 or radius<=0 or
+        not np.isfinite([spacing,radius,jitter]).all() or jitter<0 or lut_size<2):
+        raise ValueError('Positive dimensions/radii and finite nonnegative jitter required')
+    lo,hi = (sides,sides+1) if isinstance(sides,int) else sides
+    if not 3<=lo<hi<=13: raise ValueError('Polygon sides must be in [3,12]')
+    draw = _prng(seed)
+    centers,polys,lattice,radii = [],[],[],[]
+    for row in range(rows):
+        for col in range(cols):
+            ctr = np.array([(col+.26*(draw()-.5))*spacing,(row+.26*(draw()-.5))*spacing])
+            n = lo+int(draw()*(hi-lo)); r = radius*(.9+.2*draw())
+            # Circular vertex order and gaps < pi: simple convex polygons containing center.
+            j = min(jitter,.45*np.pi/n)
+            angles = np.array([2*np.pi*k/n+(2*draw()-1)*j for k in range(n)])
+            polys.append(ctr+r*np.c_[np.cos(angles),np.sin(angles)])
+            centers.append(ctr); lattice.append((row,col)); radii.append(r)
+    luts=[]
+    for c,p,r in zip(centers,polys,radii):
+        ax=np.linspace(-1.5*r,1.5*r,lut_size); x,y=np.meshgrid(ax,ax)
+        luts.append(_signed_distance(x,y,p-c))
+    return CellField(np.array(centers),polys,np.array(lattice),np.array(luts),
+                     1.5*np.array(radii),np.array(radii),rows,cols,spacing)
 
 
-def grid(w, h, bbox):
-    x0, x1, y0, y1 = bbox
-    return np.meshgrid(np.linspace(x0, x1, w, dtype=F32),
-                       np.linspace(y0, y1, h, dtype=F32))
+def grid(w,h,bbox):
+    """Pixel centers, y increasing downwards, matching browser readback."""
+    x0,x1,y0,y1=bbox
+    return np.meshgrid(x0+(np.arange(w)+.5)*(x1-x0)/w,y0+(np.arange(h)+.5)*(y1-y0)/h)
 
 
-# ------------------------------------------------------------------ energy bits
-def _sample_lut(dx, dy, lut, r, bilinear=True):
-    """
-    Sample signed polygon distance from precomputed LUT with bilinear interpolation.
-    For queries beyond the LUT bounding box [-r, r], adds the Euclidean distance
-    from the bounding box boundary (preserving 1-Lipschitz continuity).
-    """
-    n = lut.shape[-1]
-    gx = (dx + r) * (n - 1) / (2.0 * r)
-    gy = (dy + r) * (n - 1) / (2.0 * r)
-
-    if not bilinear:
-        ix = np.clip(np.round(gx).astype(np.int32), 0, n - 1)
-        iy = np.clip(np.round(gy).astype(np.int32), 0, n - 1)
-        base = lut[iy, ix] if lut.ndim == 2 else np.take_along_axis(
-            lut.reshape(lut.shape[0], -1), (iy * n + ix)[..., None], -1)[..., 0]
-    else:
-        gx_c = np.clip(gx, 0.0, n - 1 - 1e-6)
-        gy_c = np.clip(gy, 0.0, n - 1 - 1e-6)
-        x0 = gx_c.astype(np.int32)
-        y0 = gy_c.astype(np.int32)
-        x1 = np.minimum(x0 + 1, n - 1)
-        y1 = np.minimum(y0 + 1, n - 1)
-        fx = gx_c - x0
-        fy = gy_c - y0
-
-        if lut.ndim == 2:
-            v00, v10 = lut[y0, x0], lut[y0, x1]
-            v01, v11 = lut[y1, x0], lut[y1, x1]
-        else:
-            flat = lut.reshape(lut.shape[0], -1)
-            v00 = np.take_along_axis(flat, (y0 * n + x0)[..., None], -1)[..., 0]
-            v10 = np.take_along_axis(flat, (y0 * n + x1)[..., None], -1)[..., 0]
-            v01 = np.take_along_axis(flat, (y1 * n + x0)[..., None], -1)[..., 0]
-            v11 = np.take_along_axis(flat, (y1 * n + x1)[..., None], -1)[..., 0]
-
-        base = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
-
-    out_dx = np.maximum(0.0, np.abs(dx) - r)
-    out_dy = np.maximum(0.0, np.abs(dy) - r)
-    return (base + np.hypot(out_dx, out_dy)).astype(F32)
+def _sample_lut(dx,dy,lut,r,poly=None):
+    x,y=np.broadcast_arrays(np.asarray(dx,float),np.asarray(dy,float)); n=lut.shape[-1]
+    gx=np.clip((x+r)*(n-1)/(2*r),0,n-1); gy=np.clip((y+r)*(n-1)/(2*r),0,n-1)
+    ix=np.minimum(gx.astype(int),n-2); iy=np.minimum(gy.astype(int),n-2)
+    fx,fy=gx-ix,gy-iy
+    value=(1-fx)*(1-fy)*lut[iy,ix]+fx*(1-fy)*lut[iy,ix+1]+(1-fx)*fy*lut[iy+1,ix]+fx*fy*lut[iy+1,ix+1]
+    outside=(abs(x)>r)|(abs(y)>r)
+    if outside.any():
+        if poly is None: raise ValueError('Outside LUT: analytical polygon required')
+        value=np.array(value,copy=True)
+        value[outside]=_signed_distance(x[outside],y[outside],poly)
+    return value
 
 
-def _phase_atan2(dx, dy, dc, kappa, lam):
-    """Reference phase term: 1 - cos(kappa*theta + lam*d). At center dc < 1e-6, phase is 0."""
-    theta = np.arctan2(dy, dx)
-    val = 1.0 - np.cos(kappa * theta + lam * dc)
-    return np.where(dc < 1e-6, 0.0, val).astype(F32)
+def _sdf(field,cid,x,y,analytic=False):
+    dx,dy=x-field.centers[cid,0],y-field.centers[cid,1]
+    poly=field.polys[cid]-field.centers[cid]
+    return (_signed_distance(dx,dy,poly) if analytic else
+            _sample_lut(dx,dy,field.luts[cid],field.lut_radius[cid],poly))
 
 
-def _phase_algebraic(dx, dy, dc, lam):
-    """
-    Exact algebraic phase evaluation for kappa == 2 without atan2.
-    For dc -> 0, the directional limit is regularized to 0 to match _phase_atan2 at the center.
-    """
-    d2 = dx * dx + dy * dy
-    safe_d2 = np.maximum(d2, F32(1e-12))
-    cl, sl = np.cos(lam * dc), np.sin(lam * dc)
-    cos_val = ((dx * dx - dy * dy) * cl - 2.0 * dx * dy * sl) / safe_d2
-    cos_val = np.where(dc < 1e-6, 1.0, cos_val)
-    return (1.0 - cos_val).astype(F32)
+def _validate(alpha,beta,gamma,kappa,lam):
+    if not np.isfinite([alpha,beta,gamma,kappa,lam]).all(): raise ValueError('Finite parameters required')
+    if min(alpha,beta,gamma)<0 or int(kappa)!=kappa or not 1<=kappa<=6 or lam<0:
+        raise ValueError('Nonnegative weights/frequency and integer harmonic 1..6 required')
 
 
-def prune_radius(field: CellField, alpha, beta, gamma) -> float:
-    """
-    Admissible candidate pruning bound based on an incumbent energy.
-
-    For any cell c with polygon interior depth I_c = -min(s_c) >= 0 (where I_max = max(I_c)):
-        E_c(x) >= alpha * d_c - beta * I_max
-
-    Given an incumbent candidate c* (e.g., nearest lattice center with distance d_min),
-    the winning energy is bounded above by:
-        U(x) = E_{c*}(x) <= alpha * d_min + beta * s_{c*}(x) + 2 * gamma
-
-    Since s_{c*}(x) <= d_min (as s_{c*}(0) <= 0 and s is 1-Lipschitz), we have:
-        U(x) <= (alpha + beta) * d_min + 2 * gamma
-
-    Therefore, any cell c whose lower bound exceeds U(x) cannot win:
-        alpha * d_c - beta * I_max > U(x)
-        d_c > d_min + (beta * (I_max + d_min) + 2 * gamma) / alpha
-
-    For a global delta = d_c - d_min across all pixels where d_min <= max_lattice_dist:
-    """
-    I_max = float(field.lut_depth.max())
-    d_max_cell = field.spacing * np.sqrt(2.0) / 2.0
-    span = float(I_max + d_max_cell)
-    return float((beta * span + 2.0 * gamma) / max(alpha, 1e-9))
+def _phase_atan2(dx,dy,dc,kappa,lam):
+    # Center convention, not a direction-independent continuous limit.
+    return np.where(dc<1e-6,0.,1-np.cos(kappa*np.arctan2(dy,dx)+lam*dc))
 
 
-# ------------------------------------------------------------------- renderers
-BACKGROUND = -1
+def _energy(f,c,x,y,a,b,g,k,l,analytic):
+    dx,dy=x-f.centers[c,0],y-f.centers[c,1]; d=np.hypot(dx,dy)
+    return a*d+b*_sdf(f,c,x,y,analytic)+g*_phase_atan2(dx,dy,d,k,l)
 
 
-def apply_margin(labels, field, xv, yv, margin):
-    """
-    Turn a space-filling partition into cells + mortar by releasing pixels
-    whose signed distance to the winning polygon exceeds `margin`.
-    margin=None keeps the full partition.
-    """
-    if margin is None:
-        return labels
-    valid = labels >= 0
-    out = labels.copy()
-    if not valid.any():
-        return out
-
-    ln = field.luts.shape[-1]
-    dx = xv[valid] - field.centers[labels[valid], 0]
-    dy = yv[valid] - field.centers[labels[valid], 1]
-    rad = field.lut_radius[labels[valid]]
-    lbl = labels[valid]
-
-    # Bilinear sampling
-    gx = np.clip((dx + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
-    gy = np.clip((dy + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
-    x0, y0 = gx.astype(np.int32), gy.astype(np.int32)
-    x1, y1 = np.minimum(x0 + 1, ln - 1), np.minimum(y0 + 1, ln - 1)
-    fx, fy = gx - x0, gy - y0
-
-    v00 = field.luts[lbl, y0, x0]
-    v10 = field.luts[lbl, y0, x1]
-    v01 = field.luts[lbl, y1, x0]
-    v11 = field.luts[lbl, y1, x1]
-    sd = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
-
-    out_dx = np.maximum(0.0, np.abs(dx) - rad)
-    out_dy = np.maximum(0.0, np.abs(dy) - rad)
-    sd += np.hypot(out_dx, out_dy)
-
-    mask = np.zeros(labels.shape, bool)
-    mask[valid] = (sd > margin)
-    out[mask] = BACKGROUND
-    return out
-
-
-def render_reference(field: CellField, xv, yv, alpha=0.58, beta=0.32,
-                     gamma=0.10, kappa=2.0, lam=1.0):
-    """Brute force over all cells. The definition of correct."""
-    best_v = np.full(xv.shape, np.inf, F32)
-    best_i = np.zeros(xv.shape, np.int32)
-    for i, c in enumerate(field.centers):
-        dx, dy = xv - c[0], yv - c[1]
-        dc = np.hypot(dx, dy)
-        v = (alpha * dc
-             + beta * _sample_lut(dx, dy, field.luts[i], field.lut_radius[i])
-             + gamma * _phase_atan2(dx, dy, dc, kappa, lam))
-        m = v < best_v
-        best_v[m], best_i[m] = v[m], i
-    return best_i
-
-
-def render_pruned(field: CellField, xv, yv, alpha=0.58, beta=0.32, gamma=0.10,
-                  kappa=2.0, lam=1.0, return_stats=False):
-    """
-    Admissible pruning: evaluate the full energy only for cells inside the
-    prune_radius() ball around each pixel's nearest centre. Label-identical to
-    render_reference by construction.
-    """
-    delta = prune_radius(field, alpha, beta, gamma)
-    cx = field.centers[:, 0][:, None, None]
-    cy = field.centers[:, 1][:, None, None]
-    dcs = np.hypot(xv[None] - cx, yv[None] - cy)
-    dmin = dcs.min(0)
-    live = dcs <= (dmin + delta)[None]
-
-    best_v = np.full(xv.shape, np.inf, F32)
-    best_i = np.zeros(xv.shape, np.int32)
-    for i in range(field.n):
-        m0 = live[i]
-        if not m0.any():
-            continue
-        dx, dy = xv - field.centers[i, 0], yv - field.centers[i, 1]
-        dc = dcs[i]
-        v = (alpha * dc
-             + beta * _sample_lut(dx, dy, field.luts[i], field.lut_radius[i])
-             + gamma * _phase_atan2(dx, dy, dc, kappa, lam))
-        m = m0 & (v < best_v)
-        best_v[m], best_i[m] = v[m], i
-    if return_stats:
-        return best_i, {"delta": delta, "mean_candidates": float(live.sum(0).mean())}
-    return best_i
+def render_reference(field,xv,yv,alpha=.58,beta=.32,gamma=.1,kappa=2,lam=1.,analytic=False,return_energy=False):
+    _validate(alpha,beta,gamma,kappa,lam)
+    best=np.full(xv.shape,np.inf); labels=np.zeros(xv.shape,np.int32)
+    for c in range(field.n):
+        e=_energy(field,c,xv,yv,alpha,beta,gamma,kappa,lam,analytic)
+        win=e<best; labels[win]=c; best[win]=e[win]
+    return (labels,best) if return_energy else labels
 
 
 class BinnedRenderer:
+    """Finite ring search with a query-specific stopping certificate.
+
+    No ring limit or cached query bins depend on constructor weights. Reuse
+    with new weights, harmonics, domains, or coordinates is supported.
     """
-    Lattice-binned renderer with ring escalation.
+    def __init__(self,field,alpha=.58,beta=.32,gamma=.1,kappa=2,lam=1.,analytic=False):
+        self.f=field
+        self.defaults=dict(alpha=alpha,beta=beta,gamma=gamma,kappa=kappa,lam=lam,analytic=analytic)
 
-    Cells sit on a jittered lattice, so a pixel's candidates are its lattice
-    neighbourhood -- no global [N,H,W] distance stack, no argpartition.
-
-    Cost is driven down by two things:
-
-    * **Ring escalation.** Ring 1 (9 candidates) is evaluated for every pixel.
-      Any cell outside ring r sits at centre distance >= ((r+1) - 0.63)*s, so its
-      energy is at least alpha times that. A pixel whose current best energy is
-      below that floor is provably final and is masked out of all further rings.
-      In practice almost every pixel finishes at ring 1, so the exact renderer
-      costs barely more than the 9-candidate heuristic.
-    * **Algebraic phase + 1-D LUT.** For kappa = 2 the phase term needs no atan2
-      (see _phase_algebraic); the remaining cos(lam*d), sin(lam*d) are read from
-      a shared 1-D table indexed by d, replacing two transcendentals per
-      candidate with two gathers.
-
-    Labels are identical to render_reference().
-    """
-
-    def __init__(self, field: CellField, alpha=0.58, beta=0.32, gamma=0.10,
-                 lam=1.0, phase_lut=262144):
-        self.f = field
-        s = field.spacing
-        # Smallest provably sufficient ring (see class docstring).
-        # energies are shifted down by at most beta*I_max, so the floor a distant
-        # cell must clear is alpha*d - beta*I_max
-        imax = float(field.lut_depth.max())
-        u = (alpha * np.sqrt(2.0) * 0.63 * s
-             + beta * float(field.lut_radius.max()) + 2.0 * gamma)
-        self.ring = 1
-        while (alpha * ((self.ring + 1) - 0.63) * s - beta * imax < u
-               and self.ring < max(field.rows, field.cols)):
-            self.ring += 1
-        self.bound_energy = float(u)
-        self.alpha = alpha
-        self.beta = beta
-        self.gamma = gamma
-        self.lam = lam
-
-        self.index = np.full((field.rows, field.cols), -1, np.int32)
-        for i, (r, c) in enumerate(field.lattice):
-            self.index[r, c] = i
-
-        # 1-D phase table over d in [0, dmax]
-        x0, x1, y0, y1 = field.bbox
-        self._dmax = float(np.hypot(x1 - x0, y1 - y0))
-        self._pn = phase_lut
-        t = np.linspace(0.0, self._dmax, phase_lut, dtype=F32)
-        self._cos = np.cos(lam * t).astype(F32)
-        self._sin = np.sin(lam * t).astype(F32)
-        self._bin_cache: dict[tuple[int, int], np.ndarray] = {}
-
-    def _bins(self, xv, yv):
-        key = (xv.shape[1], xv.shape[0])
-        if key not in self._bin_cache:
-            s = self.f.spacing
-            self._bin_cache[key] = np.stack([
-                np.clip(np.rint(yv / s).astype(np.int32), 0, self.f.rows - 1),
-                np.clip(np.rint(xv / s).astype(np.int32), 0, self.f.cols - 1)])
-        return self._bin_cache[key]
-
-    def _ring_offsets(self, r):
-        if r == 0:
-            return [(0, 0)]
-        return [(dr, dc) for dr in range(-r, r + 1) for dc in range(-r, r + 1)
-                if max(abs(dr), abs(dc)) == r]
-
-    def render(self, xv, yv, alpha=None, beta=None, gamma=None, lam=None, return_stats=False):
-        alpha = self.alpha if alpha is None else alpha
-        beta = self.beta if beta is None else beta
-        gamma = self.gamma if gamma is None else gamma
-        lam = self.lam if lam is None else lam
-        rc = self._bins(xv, yv)
-        cen, luts, lr = self.f.centers, self.f.luts, self.f.lut_radius
-        ln = luts.shape[-1]
-        pscale = (self._pn - 1) / self._dmax
-
-        best_v = np.full(xv.shape, np.inf, F32)
-        best_i = np.zeros(xv.shape, np.int32)
-        active = np.ones(xv.shape, bool)
-        stats = []
-
-        for r in range(0, self.ring + 1):
-            if not active.any():
-                break
-            idx = np.flatnonzero(active.ravel())
-            xs = xv.ravel()[idx]; ys = yv.ravel()[idx]
-            rr0 = rc[0].ravel()[idx]; cc0 = rc[1].ravel()[idx]
-            bv = best_v.ravel()[idx].copy(); bi = best_i.ravel()[idx].copy()
-
-            for dr, dc_ in self._ring_offsets(r):
-                rr = np.clip(rr0 + dr, 0, self.f.rows - 1)
-                cc = np.clip(cc0 + dc_, 0, self.f.cols - 1)
-                cid = self.index[rr, cc]
-                dx = xs - cen[cid, 0]; dy = ys - cen[cid, 1]
-                d2 = dx * dx + dy * dy
-                dc = np.sqrt(d2, dtype=F32)
-                rad = lr[cid]
-                gx = np.clip((dx + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
-                gy = np.clip((dy + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
-                x0, y0 = gx.astype(np.int32), gy.astype(np.int32)
-                x1, y1 = np.minimum(x0 + 1, ln - 1), np.minimum(y0 + 1, ln - 1)
-                fx, fy = gx - x0, gy - y0
-                v00 = luts[cid, y0, x0]
-                v10 = luts[cid, y0, x1]
-                v01 = luts[cid, y1, x0]
-                v11 = luts[cid, y1, x1]
-                de = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
-                out_dx = np.maximum(0.0, np.abs(dx) - rad)
-                out_dy = np.maximum(0.0, np.abs(dy) - rad)
-                de += np.hypot(out_dx, out_dy)
-
-                cl, sl = np.cos(lam * dc), np.sin(lam * dc)
-                cos_term = ((dx * dx - dy * dy) * cl - 2.0 * dx * dy * sl) / (d2 + F32(1e-12))
-                cos_term = np.where(dc < 1e-6, 1.0, cos_term)
-                ph = 1.0 - cos_term
-                v = alpha * dc + beta * de + gamma * ph
-                m = v < bv
-                bv[m] = v[m]; bi[m] = cid[m]
-
-            best_v.ravel()[idx] = bv
-            best_i.ravel()[idx] = bi
-            # a cell outside ring r has energy >= alpha * D_min - beta * I_max
-            floor = (alpha * ((r + 1) - 0.63) * self.f.spacing
-                     - beta * float(self.f.lut_depth.max()))
-            still = bv > floor
-            stats.append((r, int(idx.size), float(still.mean()) if idx.size else 0.0))
-            nxt = np.zeros(xv.size, bool)
-            nxt[idx[still]] = True
-            active = nxt.reshape(xv.shape)
-
-        if return_stats:
-            return best_i, {"ring": self.ring,
-                            "pixels_per_ring": [(r, n, f) for r, n, f in stats]}
-        return best_i
+    def render(self,xv,yv,return_stats=False,**overrides):
+        p=self.defaults|overrides
+        unknown=p.keys()-{'alpha','beta','gamma','kappa','lam','analytic'}
+        if unknown: raise TypeError(f'Unknown parameters: {unknown}')
+        a,b,g,k,l=[p[n] for n in ('alpha','beta','gamma','kappa','lam')]
+        _validate(a,b,g,k,l)
+        f=self.f; s=f.spacing; x,y=xv.ravel(),yv.ravel()
+        c0=np.clip(np.floor(x/s+.5).astype(int),0,f.cols-1)
+        r0=np.clip(np.floor(y/s+.5).astype(int),0,f.rows-1)
+        best=np.full(x.size,np.inf); labels=np.full(x.size,f.n,np.int32)
+        active=np.ones(x.size,bool); stats=[]; evaluations=0
+        eps=0 if p['analytic'] else float(f.lut_error.max())
+        bound_radius=float(f.radii.max())+eps
+        for ring in range(max(f.rows,f.cols)):
+            idx=np.flatnonzero(active)
+            if not len(idx): break
+            for dr in range(-ring,ring+1):
+                for dc in range(-ring,ring+1):
+                    if max(abs(dr),abs(dc))!=ring: continue
+                    rr,cc=r0[idx]+dr,c0[idx]+dc
+                    valid=(rr>=0)&(rr<f.rows)&(cc>=0)&(cc<f.cols)
+                    ii=idx[valid]; ids=rr[valid]*f.cols+cc[valid]
+                    for cid in np.unique(ids):
+                        q=ii[ids==cid]
+                        d=np.hypot(x[q]-f.centers[cid,0],y[q]-f.centers[cid,1])
+                        lower=(a+b)*d-b*(f.radii[cid]+eps)
+                        guard=1e-12*(1+abs(lower)+np.where(np.isfinite(best[q]),abs(best[q]),0))
+                        q=q[lower<=best[q]+guard]
+                        if not len(q): continue
+                        e=_energy(f,int(cid),x[q],y[q],a,b,g,k,l,p['analytic'])
+                        win=(e<best[q])|((e==best[q])&(cid<labels[q]))
+                        labels[q[win]]=cid; best[q[win]]=e[win]; evaluations+=len(q)
+            # Remaining sites lie in four strips. Half-plane distances remain
+            # conservative for queries outside the finite field's bounding box.
+            distances=np.stack([
+                np.where(c0[idx]-ring>0,np.maximum(x[idx]-(c0[idx]-ring-1+.13)*s,0),np.inf),
+                np.where(c0[idx]+ring+1<f.cols,np.maximum((c0[idx]+ring+1-.13)*s-x[idx],0),np.inf),
+                np.where(r0[idx]-ring>0,np.maximum(y[idx]-(r0[idx]-ring-1+.13)*s,0),np.inf),
+                np.where(r0[idx]+ring+1<f.rows,np.maximum((r0[idx]+ring+1-.13)*s-y[idx],0),np.inf)])
+            dmin=distances.min(0); remaining=np.isfinite(dmin)
+            lower=np.full(len(idx),np.inf)
+            lower[remaining]=(a+b)*dmin[remaining]-b*bound_radius
+            guard=1e-12*(1+abs(best[idx])+np.where(remaining,abs(lower),0))
+            active[idx]=remaining&(lower<=best[idx]+guard)
+            stats.append((ring,len(idx),int(active.sum())))
+        assert not active.any(), 'Finite search must exhaust or certify every pixel'
+        result=labels.reshape(xv.shape)
+        return (result,dict(pixels_per_ring=stats,energy_evaluations=evaluations,
+                            mean_candidates=evaluations/x.size)) if return_stats else result
 
 
-def shape_fidelity(labels, field, xv, yv, min_pixels=50):
-    """
-    Mean IoU between each rendered cell and its target generating polygon.
-
-    Parameters:
-        labels: 2D array of cell assignments (-1 for background / grout).
-        field: CellField containing generating polygons.
-        xv, yv: Pixel coordinate grids.
-        min_pixels: Minimum pixel threshold. In finite crops, edge cells truncated
-                    by image boundaries can be excluded (min_pixels > 0, default 50)
-                    or penalized with IoU = 0.0 (min_pixels = 0).
-    """
-    from matplotlib.path import Path as MplPath
-    h, w = labels.shape
-    pts = np.column_stack([xv.ravel(), yv.ravel()])
-    out = []
-    for i, poly in enumerate(field.polys):
-        cell = (labels == i)
-        cnt = cell.sum()
-        if cnt < min_pixels:
-            if min_pixels == 0:
-                out.append(0.0)
-            continue
-        tgt = MplPath(poly).contains_points(pts).reshape(h, w)
-        u = np.logical_or(cell, tgt).sum()
-        if u > 0:
-            out.append(float(np.logical_and(cell, tgt).sum() / u))
-        elif min_pixels == 0:
-            out.append(0.0)
-    return float(np.mean(out)) if out else 0.0
+def render_binned(field,xv,yv,**kw): return BinnedRenderer(field).render(xv,yv,**kw)
+def render_pruned(field,xv,yv,**kw): return render_binned(field,xv,yv,**kw)
 
 
-def render_binned(field, xv, yv, **kw):
-    return BinnedRenderer(field, **{k: v for k, v in kw.items()
-                                    if k in ("alpha", "beta", "gamma", "lam")}
-                          ).render(xv, yv, **kw)
-
-
-# ------------------------------------------------------------------- post-pass
-def soften(labels, field: CellField, inset=0.955):
-    """Re-rasterise each polygon shrunk toward its centroid; unclaimed pixels
-    keep their raw label. This is the post-pass that actually runs."""
-    from matplotlib.path import Path as MplPath
-    h, w = labels.shape
-    x0, x1, y0, y1 = field.bbox
-    xv, yv = np.meshgrid(np.linspace(x0, x1, w), np.linspace(y0, y1, h))
-    pts = np.column_stack([xv.ravel(), yv.ravel()])
-    out = np.full_like(labels, -1)
-    for i, p in enumerate(field.polys):
-        q = p.mean(0) + (p - p.mean(0)) * inset
-        m = MplPath(q).contains_points(pts).reshape(h, w)
-        out[(out < 0) & m] = i
-    holes = out < 0
-    out[holes] = labels[holes]
+def apply_margin(labels,field,xv,yv,margin,analytic=False):
+    if margin is None: return labels.copy()
+    if not np.isfinite(margin): raise ValueError('Finite margin or None required')
+    out=labels.copy()
+    for c in np.unique(labels[labels>=0]):
+        mask=labels==c
+        out[mask]=np.where(_sdf(field,int(c),xv[mask],yv[mask],analytic)>margin,-1,c)
     return out
 
 
-# ------------------------------------------------------------------- baselines
-def voronoi_kdtree(field: CellField, xv, yv):
-    """What a production pipeline actually uses."""
+def shape_fidelity(labels,field,xv,yv,min_pixels=50):
+    """Target-based eligibility shared across methods; empty output scores zero."""
+    values=[]
+    for c in range(field.n):
+        target=_sdf(field,c,xv,yv,True)<=0
+        if target.sum()<min_pixels: continue
+        region=labels==c; union=(region|target).sum()
+        values.append((region&target).sum()/union if union else 0)
+    return float(np.mean(values)) if values else 0.
+
+
+def voronoi_kdtree(field,xv,yv):
     from scipy.spatial import cKDTree
-    tree = cKDTree(field.centers)
-    pts = np.column_stack([xv.ravel(), yv.ravel()])
-    return tree.query(pts, k=1, workers=-1)[1].reshape(xv.shape).astype(np.int32)
+    return cKDTree(field.centers).query(np.c_[xv.ravel(),yv.ravel()],workers=1)[1].reshape(xv.shape).astype(np.int32)
 
 
-# --------------------------------------------------------------------- metrics
-def boundary_density(lbl):
-    return float(((lbl != np.roll(lbl, 1, 0)) | (lbl != np.roll(lbl, 1, 1))).mean())
+def geometry_metrics(labels,min_component_fraction=.0001,connectivity=8):
+    """Descriptive raster metrics, not continuous topology certificates."""
+    from scipy.ndimage import label,generate_binary_structure
+    from scipy.spatial import ConvexHull
+    solidities=[]; components=[]
+    threshold=max(1,int(np.ceil(labels.size*min_component_fraction)))
+    for c in np.unique(labels[labels>=0]):
+        ys,xs=np.nonzero(labels==c)
+        if len(xs)<threshold: continue
+        corners=np.vstack([np.c_[xs+dx,ys+dy] for dx,dy in ((-.5,-.5),(-.5,.5),(.5,-.5),(.5,.5))])
+        solidities.append(len(xs)/ConvexHull(corners).volume)
+        lab,_=label(labels==c,generate_binary_structure(2,2 if connectivity==8 else 1))
+        components.append(int(np.sum(np.bincount(lab.ravel())[1:]>=threshold)))
+    return dict(median_solidity=float(np.median(solidities)) if solidities else None,
+                disconnected_pct=100*float(np.mean(np.array(components)>1)) if components else 0,
+                valid_cells=len(components),threshold_pixels=threshold,connectivity=connectivity)
 
 
-def colorize(labels, seed=33, edge_dark=0.27):
+def cell_colors(n,seed=33):
     from matplotlib.colors import hsv_to_rgb
-    rng = np.random.default_rng(seed)
-    n = int(labels.max() + 1)
-    hues = (np.linspace(0, 1, n, endpoint=False) + rng.uniform(-0.02, 0.02, n)) % 1.0
-    rgb = hsv_to_rgb(np.c_[hues,
-                           np.clip(0.46 + 0.24 * rng.random(n), 0, 1),
-                           np.clip(0.68 + 0.22 * rng.random(n), 0, 1)])
-    img = rgb[labels]
-    img[(labels != np.roll(labels, 1, 0)) | (labels != np.roll(labels, 1, 1))] *= edge_dark
-    return np.clip(img, 0, 1)
+    draw=_prng(seed)
+    hues=np.array([(i/n+.04*(draw()-.5))%1 for i in range(n)])
+    saturation=np.array([.46+.24*draw() for _ in range(n)])
+    value=np.array([.68+.22*draw() for _ in range(n)])
+    return hsv_to_rgb(np.c_[hues,saturation,value])
+
+
+def colorize(labels,seed=33,edge_dark=.27,n_cells=None):
+    n=n_cells or max(1,int(labels.max())+1)
+    colors=cell_colors(n,seed)
+    image=colors[np.maximum(labels,0)]; image[labels<0]=.07
+    return image
+
+
+def boundary_density(labels):
+    return float(((labels[1:,:]!=labels[:-1,:]).sum()+(labels[:,1:]!=labels[:,:-1]).sum())/labels.size)
