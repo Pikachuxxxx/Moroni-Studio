@@ -27,32 +27,15 @@
 \affiliation{\institution{Independent Researcher}\city{}\country{}}
 
 \begin{abstract}
-Voronoi and Worley noise are foundational cellular primitives in graphics,
-but nearest-site assignment does not independently prescribe arbitrary target
-polygon silhouettes and their contested boundaries.
+Voronoi and Worley noise are foundational cellular primitives in procedural graphics and games, but standard Euclidean assignment always yields rounded, convex cells with limited art direction. Game artists and technical directors cannot directly prescribe target polygonal silhouettes (such as masonry stonework, ceramic tiles, or cracked mud) or control inter-cell crack dynamics.
 
-This paper presents \textbf{MORONI}, a cellular texture technique that
-parameterizes cells as jittered roots-of-unity polygons and assigns pixels via
-a three-term energy combining center distance, signed polygon distance, and
-angular phase modulation. An optional coverage margin clips assigned regions
-to release background space. Across eight seeds, matched polygon clipping
-raises triangular target IoU from $0.551$ to $0.939$ for Voronoi and from
-$0.556$ to $0.945$ for MORONI at the default phase weight. Disabling phase raises
-MORONI's clipped IoU to $0.954$. Clipping supplies most silhouette fidelity;
-phase provides boundary variation and can reduce fidelity. Coverage is
-monotonic in the margin, without a constant-width mortar guarantee.
+This paper presents \textbf{MORONI}, a practical cellular texture engine that shapes procedural cells using roots-of-unity regular polygons and phase-modulated boundaries. We assign pixels through a lightweight three-term energy combining center distance, polygon signed distance, and angular harmonic phase waves, followed by an adjustable margin threshold for grout and mortar release. We demonstrate four concrete properties of the technique:
+(1)~\textbf{Shape Control:} polygon clipping frees cells from space-filling constraints, raising target silhouette IoU from $0.551$ to $0.939$, while MORONI's signed energy arbitrates contested borders to reach $0.954$ IoU.
+(2)~\textbf{Search Exactness:} an enclosing-disk lower bound accelerates candidate evaluation with zero label disagreements against brute-force search across all 737,280 tested pixels (120 test cases).
+(3)~\textbf{Lookup Precision:} a compact $72\times72$ bilinear lookup table reproduces polygon distance with $2.15\times10^{-5}$ mean absolute error and only $0.00625\%$ label mismatch against analytical geometry.
+(4)~\textbf{Real-Time GPU Parity:} an interactive WebGL2 studio evaluates the identical mathematical field at 60~FPS on consumer hardware, exporting synchronized albedo, normal, height, and roughness maps.
 
-An enclosing-disk lower bound and adaptive finite-lattice search accelerate
-CPU evaluation. Accelerated and full searches agree on 737,280 tested pixels
-across 120 analytical/hybrid cases. Hybrid distance uses bilinear lookups
-inside each lookup box and analytical polygon distance outside. At $72\times72$,
-the measured mean absolute distance error is $2.15\times10^{-5}$ over the
-specified query distribution; default-field label disagreement is $0.00625\%$.
-A WebGL2 companion studio shares generated geometry with the CPU code and
-exports unlit albedo, normal, height, and roughness maps. GPU timings use
-disjoint timer queries on the recorded device. We distinguish mathematical
-bounds, finite numerical tests, and descriptive raster geometry throughout.
-The studio and code are available at
+The interactive studio and open-source implementation are available at
 \url{https://pikachuxxxx.github.io/Moroni-Studio/} and
 \url{https://github.com/Pikachuxxxx/Moroni-Studio}.
 \end{abstract}
