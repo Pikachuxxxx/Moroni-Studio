@@ -1,6 +1,6 @@
 /**
- * MORONI Studio — Unity-Style Application Controller
- * Manages 12 production material presets, WebGL2 GPU engine with CPU 2D fallback,
+ * MORONI Studio â€” Unity-Style Application Controller
+ * Manages 12 illustrative material presets, WebGL2 GPU engine with CPU 2D fallback,
  * live telemetry HUD, PBR map generation, and SVG vector export.
  */
 
@@ -19,7 +19,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.18, 0.18, 0.18],
-        edgeDark: 0.30
     },
     cracked_mud: {
         name: "Cracked Mud / Desiccation",
@@ -34,7 +33,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.15, 0.12, 0.09],
-        edgeDark: 0.25
     },
     ceramic_tile: {
         name: "Ceramic Floor Tile",
@@ -49,7 +47,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.90, 0.90, 0.92],
-        edgeDark: 0.40
     },
     shattered_glass: {
         name: "Shattered Tempered Glass",
@@ -64,7 +61,6 @@ const PRESETS = {
         kappa: 3.0,
         lambda: 1.8,
         groutColor: [0.03, 0.05, 0.08],
-        edgeDark: 0.15
     },
     spiderweb: {
         name: "Spiderweb Radial Fracture",
@@ -79,7 +75,6 @@ const PRESETS = {
         kappa: 4.0,
         lambda: 2.5,
         groutColor: [0.05, 0.05, 0.05],
-        edgeDark: 0.20
     },
     cobblestone: {
         name: "Cobblestone Street Pavement",
@@ -94,7 +89,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.2,
         groutColor: [0.12, 0.12, 0.14],
-        edgeDark: 0.28
     },
     scifi_hex: {
         name: "Sci-Fi Hexagonal Hull Plating",
@@ -109,7 +103,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.05, 0.15, 0.25],
-        edgeDark: 0.45
     },
     craquelure: {
         name: "Porcelain Craquelure Glaze",
@@ -124,7 +117,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 2.2,
         groutColor: [0.35, 0.25, 0.15],
-        edgeDark: 0.20
     },
     dragon_scales: {
         name: "Dragon Scales / Reptilian",
@@ -139,7 +131,6 @@ const PRESETS = {
         kappa: 1.0,
         lambda: 1.4,
         groutColor: [0.08, 0.12, 0.05],
-        edgeDark: 0.22
     },
     alien_biomass: {
         name: "Alien Biomass Tissue",
@@ -154,7 +145,6 @@ const PRESETS = {
         kappa: 3.0,
         lambda: 1.5,
         groutColor: [0.22, 0.05, 0.18],
-        edgeDark: 0.20
     },
     basalt_columns: {
         name: "Basalt Prisms (Giant's Causeway)",
@@ -169,7 +159,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.10, 0.10, 0.10],
-        edgeDark: 0.35
     },
     voronoi_baseline: {
         name: "Classic Voronoi Baseline",
@@ -184,7 +173,6 @@ const PRESETS = {
         kappa: 2.0,
         lambda: 1.0,
         groutColor: [0.05, 0.05, 0.05],
-        edgeDark: 0.30
     }
 };
 
@@ -205,6 +193,7 @@ class MoroniApp {
         }
 
         if (!this.useWebGL) {
+            const replacement=this.canvas.cloneNode();this.canvas.replaceWith(replacement);this.canvas=replacement;
             this.ctx2d = this.canvas.getContext('2d');
         }
 
@@ -226,10 +215,9 @@ class MoroniApp {
             useMargin: true,
             
             groutColor: [0.18, 0.18, 0.18],
-            edgeDark: 0.30,
             showWireframe: false,
             
-            mode: 0, // 0: Shaded, 1: Normal, 2: Height, 3: Grout/Roughness, 4: dc, 5: sc, 6: phase, 7: split
+            mode: 9, // Unlit paper colors.
             splitPos: 0.5,
             isDraggingSplit: false,
             isPlaying: true
@@ -242,6 +230,10 @@ class MoroniApp {
         this.fps = 60;
         this.metricsDebounce = null;
 
+        if (!this.useWebGL) {
+            document.querySelectorAll('.view-btn').forEach(b=>{if(![9,1,2,3].includes(Number(b.dataset.mode)))b.disabled=true;});
+            if(this.statGpu)this.statGpu.textContent='Unavailable (CPU fallback)';
+        }
         this.bindEvents();
         this.loadPreset('stone_wall');
         this.resizeCanvas();
@@ -277,7 +269,6 @@ class MoroniApp {
         bindSlider('param-alpha', 'alpha');
         bindSlider('param-kappa', 'kappa', parseFloat);
         bindSlider('param-lambda', 'lambda', parseFloat);
-        bindSlider('param-edge-dark', 'edgeDark');
 
         // Preset Dropdown
         const presetSelect = document.getElementById('preset-select');
@@ -380,6 +371,9 @@ class MoroniApp {
             document.getElementById('btn-play').classList.remove('playing');
         });
 
+        document.getElementById('sample-four')?.addEventListener('change',e=>{
+            this.state.samples=e.target.checked ? 4:1;this.forceRenderFrame();
+        });
         // Window resize
         window.addEventListener('resize', () => {
             this.resizeCanvas();
@@ -399,8 +393,11 @@ class MoroniApp {
         const container = this.canvas.parentElement;
         if (!container) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const width = container.clientWidth || 800;
-        const height = container.clientHeight || 500;
+        const aspect=this.state.cols/this.state.rows;
+        const width = Math.min(container.clientWidth || 800,(container.clientHeight || 500)*aspect);
+        const height = width/aspect;
+        this.canvas.style.width=width+'px';
+        this.canvas.style.height=height+'px';
 
         if (this.canvas.width !== width * dpr || this.canvas.height !== height * dpr) {
             this.canvas.width = width * dpr;
@@ -430,7 +427,6 @@ class MoroniApp {
         setVal('param-alpha', p.alpha);
         setVal('param-kappa', p.kappa);
         setVal('param-lambda', p.lambda);
-        setVal('param-edge-dark', p.edgeDark || 0.30);
 
         const marginToggle = document.getElementById('param-use-margin');
         if (marginToggle) marginToggle.checked = p.useMargin;
@@ -450,60 +446,26 @@ class MoroniApp {
     }
 
     updateTopologyMetrics() {
-        const field = MoroniCore.buildCellField({
-            rows: this.state.rows,
-            cols: this.state.cols,
-            spacing: this.state.spacing,
-            radius: this.state.radius,
-            jitter: this.state.jitter,
-            sides: this.state.sides,
-            seed: this.state.seed
-        });
-
-        const res = MoroniCore.renderCPU(field, 180, 120, {
-            generator: 'moroni',
-            alpha: this.state.alpha,
-            beta: this.state.beta,
-            gamma: this.state.gamma,
-            kappa: this.state.kappa,
-            lam: this.state.lambda,
-            margin: this.state.margin,
-            useMargin: this.state.useMargin
-        });
-
-        const metrics = MoroniCore.computeMetrics(res.labels, 180, 120, field.centers.length);
-
-        const solElem = document.getElementById('metric-solidity');
-        const ncElem = document.getElementById('metric-nonconvex');
-        const disElem = document.getElementById('metric-disconnected');
-        if (solElem) solElem.textContent = metrics.medianSolidity;
-        if (ncElem) ncElem.textContent = `${metrics.nonConvexPct}%`;
-        if (disElem) disElem.textContent = `${metrics.disconnectedPct}%`;
-
-        const badge = document.getElementById('falsification-badge');
-        if (badge) {
-            if (metrics.disconnectedPct > 0) {
-                badge.textContent = "Outside Power & Apollonius Families";
-                badge.style.color = "var(--unity-red)";
-                badge.style.background = "rgba(240, 62, 62, 0.2)";
-            } else if (metrics.nonConvexPct > 5.0) {
-                badge.textContent = "Outside Power Diagram Family";
-                badge.style.color = "var(--unity-orange)";
-                badge.style.background = "rgba(245, 159, 0, 0.2)";
-            } else {
-                badge.textContent = "Convex / Near-Voronoi";
-                badge.style.color = "var(--unity-green)";
-                badge.style.background = "rgba(55, 178, 77, 0.2)";
-            }
+        const width=180,height=120;
+        let result;
+        if(this.useWebGL && this.glRenderer) {
+            result=this.glRenderer.readLabels(this.state,width,height);
+            this.forceRenderFrame();
+        } else {
+            result=MoroniCore.renderCPU(MoroniCore.buildCellField(this.state),width,height,this.state);
         }
+        const metrics=MoroniCore.computeMetrics(result.labels,width,height,this.state.rows*this.state.cols);
+        document.getElementById('metric-solidity').textContent=metrics.medianSolidity;
+        document.getElementById('metric-nonconvex').textContent=metrics.nonConvexPct+'%';
+        document.getElementById('metric-disconnected').textContent=metrics.disconnectedPct+'%';
+        document.getElementById('falsification-badge').textContent='Raster sample: 180 x 120, 8-connected';
     }
 
     forceRenderFrame(time = 0.0) {
         if (this.useWebGL && this.glRenderer && this.glRenderer.gl) {
-            const t0 = performance.now();
             this.glRenderer.render(this.state, time);
-            const dt = performance.now() - t0;
-            if (this.statGpu) this.statGpu.textContent = `${dt.toFixed(2)} ms`;
+            if(this.statGpu) this.statGpu.textContent=this.glRenderer.gpuMs===null ?
+                (this.glRenderer.timer ? 'Pending' : 'Unavailable') : this.glRenderer.gpuMs.toFixed(2)+' ms';
         } else if (this.ctx2d) {
             // High-quality CPU 2D render fallback
             const w = this.canvas.width;
@@ -528,7 +490,7 @@ class MoroniApp {
                 useMargin: this.state.useMargin
             });
             const pbr = MoroniCore.generatePBRMaps(renderRes, this.state.radius);
-            this.ctx2d.putImageData(pbr.diffuse, 0, 0);
+            this.ctx2d.putImageData(pbr[({1:'normal',2:'height',3:'roughness'})[this.state.mode]] || pbr.diffuse, 0, 0);
         }
     }
 
@@ -543,7 +505,7 @@ class MoroniApp {
                 this.lastTime = now;
             }
 
-            if (this.state.isPlaying) {
+            if (this.state.isPlaying && this.useWebGL) {
                 this.forceRenderFrame(time * 0.001);
             }
             requestAnimationFrame(render);
@@ -560,7 +522,7 @@ class MoroniApp {
     exportMap(mapType) {
         const { width, height } = this.getExportResolution();
         const exportStatus = document.getElementById('export-status');
-        if (exportStatus) exportStatus.textContent = `Baking ${mapType.toUpperCase()} map (${width}×${height})...`;
+        if (exportStatus) exportStatus.textContent = `Baking ${mapType.toUpperCase()} map (${width}Ã—${height})...`;
 
         setTimeout(() => {
             if (this.useWebGL && this.glRenderer && this.glRenderer.gl) {
@@ -571,17 +533,17 @@ class MoroniApp {
                 this.canvas.height = height;
                 this.glRenderer.gl.viewport(0, 0, width, height);
 
-                const modeMap = { diffuse: 0, normal: 1, height: 2, roughness: 3 };
+                const modeMap = { diffuse: 9, normal: 1, height: 2, roughness: 3 };
                 const exportMode = modeMap[mapType] !== undefined ? modeMap[mapType] : 0;
-                const exportState = { ...this.state, mode: exportMode };
+                const exportState = { ...this.state, mode: exportMode, samples: 1, showWireframe: false };
 
                 this.glRenderer.render(exportState, 0.0);
 
-                const dataUrl = this.canvas.toDataURL('image/png');
-                const link = document.createElement('a');
-                link.download = `moroni_${mapType}_${width}x${height}.png`;
-                link.href = dataUrl;
-                link.click();
+                // Snapshot before restoring the display; use a Blob URL for downloads.
+                const snapshot = document.createElement('canvas');
+                snapshot.width=width; snapshot.height=height;
+                snapshot.getContext('2d').drawImage(this.canvas,0,0);
+                this.downloadPNG(snapshot, `moroni_${mapType}_${width}x${height}.png`);
 
                 // Restore display canvas resolution
                 this.canvas.width = origW;
@@ -622,15 +584,21 @@ class MoroniApp {
                 const ctx = tempCanvas.getContext('2d');
                 ctx.putImageData(imgData, 0, 0);
 
-                const link = document.createElement('a');
-                link.download = `moroni_${mapType}_${width}x${height}.png`;
-                link.href = tempCanvas.toDataURL('image/png');
-                link.click();
+                this.downloadPNG(tempCanvas, `moroni_${mapType}_${width}x${height}.png`);
 
                 if (exportStatus) exportStatus.textContent = `Successfully baked ${mapType.toUpperCase()}!`;
                 setTimeout(() => { if (exportStatus) exportStatus.textContent = ""; }, 3000);
             }
         }, 30);
+    }
+
+    downloadPNG(canvas, filename) {
+        canvas.toBlob(blob => {
+            if (!blob) return;
+            const link=document.createElement('a'), url=URL.createObjectURL(blob);
+            link.href=url; link.download=filename; link.click();
+            setTimeout(()=>URL.revokeObjectURL(url),1000);
+        }, 'image/png');
     }
 
     exportSVG() {
@@ -648,9 +616,10 @@ class MoroniApp {
         const svgContent = MoroniCore.exportSVG(field, width, height);
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         const link = document.createElement('a');
-        link.download = `moroni_vectors_${width}x${height}.svg`;
+        link.download = `moroni_input_polygons_${width}x${height}.svg`;
         link.href = URL.createObjectURL(blob);
         link.click();
+        setTimeout(()=>URL.revokeObjectURL(link.href),1000);
     }
 
     exportAllPBR() {

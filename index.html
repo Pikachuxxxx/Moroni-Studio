@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MORONI Studio — Procedural Cellular & Fracture Engine</title>
+    <title>MORONI Studio - Polygon-Guided Cellular Textures</title>
     <meta name="description" content="Art-directable cellular textures via signed boundary fields and angular interference.">
-    <link rel="stylesheet" href="style.css?v=1.0.3">
+    <link rel="stylesheet" href="style.css?v=2.0.0">
 </head>
 <body>
     <!-- Top Header Bar -->
@@ -14,7 +14,7 @@
             <div class="brand-logo">M</div>
             <div>
                 <h1 class="brand-title">MORONI Studio</h1>
-                <div class="brand-subtitle">Real-Time Procedural Cellular & Fracture Engine</div>
+                <div class="brand-subtitle">Polygon-Guided Cellular Textures</div>
             </div>
         </div>
 
@@ -99,13 +99,6 @@
                         <label for="param-use-margin">Enable Grout Release (sc > m)</label>
                     </div>
 
-                    <div class="param-row">
-                        <span class="param-label" title="Edge boundary darkening">Edge Shadow</span>
-                        <div class="param-slider-wrap">
-                            <input type="range" id="param-edge-dark" min="0.0" max="0.8" step="0.05" value="0.30">
-                        </div>
-                        <span class="param-val" id="param-edge-dark-val">0.30</span>
-                    </div>
                 </div>
             </div>
 
@@ -155,19 +148,21 @@
                 </div>
             </div>
 
+            <label style="display:block;padding:12px"><input type="checkbox" id="sample-four"> 4-sample preview</label>
             <!-- 4. Export Maps -->
             <div class="control-section">
                 <div class="section-title">PBR Texture Export</div>
                 <div class="section-body">
+                    <label>Export width <select id="export-res-select"><option>512</option><option selected>1024</option><option>2048</option></select></label>
                     <div class="btn-grid-2">
-                        <button class="studio-btn" id="btn-export-diffuse">Albedo / Diffuse</button>
+                        <button class="studio-btn" id="btn-export-diffuse">Unlit Albedo</button>
                         <button class="studio-btn" id="btn-export-normal">Tangent Normal</button>
                         <button class="studio-btn" id="btn-export-height">Height / Disp</button>
                         <button class="studio-btn" id="btn-export-roughness">Roughness Mask</button>
                     </div>
                     <div style="margin-top: 6px;">
                         <button class="studio-btn" id="btn-export-svg" style="width: 100%;">
-                            📐 Export Vector SVG
+                            📐 Export Input Polygons (SVG)
                         </button>
                     </div>
                 </div>
@@ -179,7 +174,7 @@
             <!-- Viewport Top Toolbar -->
             <div class="viewport-toolbar">
                 <div class="viewport-modes">
-                    <button class="view-btn active" data-mode="0">Shaded</button>
+                    <button class="view-btn active" data-mode="9">Paper Colors</button>
                     <button class="view-btn" data-mode="1">Normal</button>
                     <button class="view-btn" data-mode="2">Height</button>
                     <button class="view-btn" data-mode="3">Roughness</button>
@@ -201,12 +196,12 @@
                 <!-- Clean Telemetry / Profiler Stats Overlay -->
                 <div id="studio-stats-box">
                     <div class="stats-header">
-                        <span>Live Telemetry</span>
-                        <span class="stat-highlight" id="fps-val">60.0 FPS</span>
+                        <span>Sampled geometry</span>
+                        <span class="stat-highlight" id="fps-val">Measuring</span>
                     </div>
                     <div class="stat-row">
-                        <span>GPU Shader Latency:</span>
-                        <span class="stat-val" id="stat-gpu">0.48 ms</span>
+                        <span>GPU draw time:</span>
+                        <span class="stat-val" id="stat-gpu">Pending</span>
                     </div>
                     <div class="stat-row">
                         <span>Lattice Sites:</span>
@@ -214,31 +209,31 @@
                     </div>
                     <div class="stat-row">
                         <span>Median Solidity:</span>
-                        <span class="stat-val" id="metric-solidity">0.984</span>
+                        <span class="stat-val" id="metric-solidity">Pending</span>
                     </div>
                     <div class="stat-row">
-                        <span>Non-Convex Shards:</span>
-                        <span class="stat-val" id="metric-nonconvex">37.5%</span>
+                        <span>Solidity below 0.98:</span>
+                        <span class="stat-val" id="metric-nonconvex">Pending</span>
                     </div>
                     <div class="stat-row">
-                        <span>Disconnected Islands:</span>
+                        <span>Multiple raster components:</span>
                         <span class="stat-val" id="metric-disconnected">0.0%</span>
                     </div>
                     <div class="stat-badge" id="falsification-badge">
-                        Outside Power Diagram Family
+                        Raster sample, not a topology proof
                     </div>
                 </div>
 
                 <div id="split-hint">
-                    ↔ Drag horizontally to compare Voronoi (Left) vs MORONI (Right)
+                    ↔ Drag horizontally to compare Voronoi + same margin (Left) vs MORONI (Right)
                 </div>
             </div>
         </main>
     </div>
 
     <!-- Scripts -->
-    <script src="moroni-glsl.js?v=1.0.3"></script>
-    <script src="moroni-core.js?v=1.0.3"></script>
-    <script src="app.js?v=1.0.3"></script>
+    <script src="moroni-core.js?v=2.0.0"></script>
+    <script src="moroni-glsl.js?v=2.0.0"></script>
+    <script src="app.js?v=2.0.0"></script>
 </body>
 </html>

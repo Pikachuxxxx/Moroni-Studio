@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>MORONI reproducibility checks</title>
+<style>body{font:15px system-ui;margin:32px;background:#fafafa;color:#222}pre{white-space:pre-wrap}canvas{width:360px;height:240px}img{width:24%}button,a{margin:8px}</style>
+<h1>MORONI browser validation</h1><p>Checks the uploaded geometry, all-candidate search, GPU/CPU labels, and optional GPU timer queries. Timings describe this browser and machine only.</p>
+<button id="run">Run validation and benchmark</button><button id="save" disabled>Download JSON report</button><button id="maps" disabled>Download map figure</button>
+<p id="status">Ready</p><canvas id="view" width="384" height="256"></canvas><div id="previews"></div><pre id="report"></pre>
+<script src="moroni-core.js?v=2.0.0"></script><script src="moroni-glsl.js?v=2.0.0"></script><script>
+const canvas=document.querySelector('#view'),renderer=new MoroniGLRenderer(canvas);
+let report,figure;
+const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+const base={rows:8,cols:12,spacing:.9,radius:.5,jitter:.35,sides:0,seed:22,alpha:.58,beta:.32,gamma:.1,kappa:2,lambda:1,margin:0,useMargin:false,mode:9};
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+document.querySelector('#save').onclick=()=>download(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),'browser-validation.json');
+document.querySelector('#maps').onclick=()=>figure.toBlob(b=>download(b,'browser_maps.png'));
+document.querySelector('#run').onclick=async()=>{
+  const status=document.querySelector('#status');document.querySelector('#run').disabled=true;
+  try{
+    const gl=renderer.gl,info=gl.getExtension('WEBGL_debug_renderer_info');
+    report={date:new Date().toISOString(),user_agent:navigator.userAgent,gpu:info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),
+      timer_supported:!!renderer.timer,base,checks:[],timings:[],color_mode:'shared unlit paper palette'};
+    const fixture=await(await fetch('../tests/field_fixture.json')).json();
+    const field=MoroniCore.buildCellField(base);
+    const cpu=MoroniCore.renderCPU(field,96,64,base);
+    report.python_js_mismatch=cpu.labels.reduce((n,v,i)=>n+(v!==fixture.labels[i]),0);
+    report.center_max_error=Math.max(...field.centers.flatMap((c,i)=>c.map((v,j)=>Math.abs(v-fixture.centers[i][j]))));
+    report.palette_max_error=Math.max(...MoroniCore.cellColors(96).flatMap((c,i)=>c.map((v,j)=>Math.abs(v-fixture.colors[i][j]))));
+    const cases=[base,...[1,2,3,4,5,6].map(kappa=>({...base,seed:42,radius:.85,jitter:.6,sides:8,alpha:.1,beta:0,gamma:.45,lambda:4,kappa})),
+      {...base,sides:3,radius:.3,jitter:.6,beta:1.5,useMargin:true,margin:-.1},
+      {...base,alpha:0,beta:0,gamma:0,useMargin:false}];
+    for(const p of cases){
+      status.textContent='Validating harmonic '+p.kappa;await frame();
+      const f=MoroniCore.buildCellField(p),ref=MoroniCore.renderCPU(f,96,64,p);
+      const got=renderer.readLabels(p,96,64).labels,full=renderer.readLabels({...p,prune:false},96,64).labels;
+      let mismatch=0,pruned=0,maxGap=0;
+      for(let i=0;i<got.length;i++){if(got[i]!==ref.labels[i]){mismatch++;maxGap=Math.max(maxGap,ref.gaps[i]);}pruned+=got[i]!==full[i];}
+      report.checks.push({params:p,pixels:got.length,cpu_gpu_mismatch:mismatch,gpu_pruned_full_mismatch:pruned,max_mismatch_energy_gap:maxGap});
+    }
+    if(renderer.timer){
+      for(const [w,h,mode] of [[640,400,9],[1280,800,9],[1920,1080,9],[640,400,1]]){
+        canvas.width=w;canvas.height=h;const p={...base,mode,useMargin:true};
+        status.textContent=`Benchmark ${w} x ${h}, mode ${mode}`;
+        for(let i=0;i<12;i++){renderer.render(p);await frame();}
+        // Drain warmup queries without blocking GPU completion.
+        for(let i=0;i<6;i++){await frame();renderer.pollTiming();}
+        renderer.timingSamples=[];
+        for(let i=0;i<40;i++){renderer.render(p);await frame();}
+        for(let i=0;i<6;i++){await frame();renderer.pollTiming();}
+        const raw=[...renderer.timingSamples],sorted=[...raw].sort((a,b)=>a-b);
+        report.timings.push({width:w,height:h,mode,samples:1,warmup:12,raw_ms:raw,median_ms:sorted.length?(sorted[Math.floor((sorted.length-1)/2)]+sorted[Math.floor(sorted.length/2)])/2:null});
+      }
+    }
+    report.disjoint_queries=renderer.disjointSamples;
+    report.passed=report.python_js_mismatch===0 && report.center_max_error<1e-12 && report.palette_max_error<1e-12 &&
+      report.checks.every(c=>c.gpu_pruned_full_mismatch===0 && c.cpu_gpu_mismatch/c.pixels<=.001);
+    // Actual GPU output, not a Python recreation labelled as studio export.
+    canvas.width=600;canvas.height=400;figure=document.createElement('canvas');figure.width=2400;figure.height=442;
+    const ctx=figure.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,2400,442);ctx.font='32px sans-serif';ctx.fillStyle='#222';
+    for(const [i,mode] of [9,1,2,3].entries()){
+      renderer.render({...base,radius:.62,jitter:.12,sides:5,beta:.9,gamma:.02,margin:.03,useMargin:true,mode},0,{timing:false});
+      ctx.drawImage(canvas,i*600,42);ctx.fillText(['Unlit albedo','Normal (+Y image-down)','Height','Roughness'][i],i*600+12,30);
+      const im=new Image();im.src=canvas.toDataURL();document.querySelector('#previews').append(im);
+    }
+    document.querySelector('#report').textContent=JSON.stringify(report,null,2);
+    status.textContent=report.passed?'PASS - report ready':'FAIL - inspect report';
+    document.querySelector('#save').disabled=false;document.querySelector('#maps').disabled=false;
+  }catch(e){status.textContent='FAIL: '+e.stack;}finally{document.querySelector('#run').disabled=false;}
+};
+</script></html>
