@@ -1,6 +1,6 @@
 /**
  * MORONI WebGL Shader Engine
- * Real-time GPU implementation of Art-Directable Cellular Textures
+ * Real-time GPU implementation of MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields
  * Renders the 3-term energy function in parallel at 60+ FPS on consumer GPUs:
  *   E_c(x) = alpha * d_c + beta * s_c(x) + gamma * (1 - cos(kappa*theta + lambda*d_c))
  */
