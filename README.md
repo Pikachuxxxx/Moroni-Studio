@@ -170,9 +170,9 @@ pdflatex -interaction=nonstopmode paper.tex
 ## Citation
 
 ```bibtex
-@article{srikar2026moroni,
+@article{phani2026moroni,
   title   = {MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields},
-  author  = {Srikar, Phani},
+  author  = {Phani, Srikar},
   journal = {ACM Transactions on Graphics (TOG)},
   volume  = {45},
   number  = {4},
