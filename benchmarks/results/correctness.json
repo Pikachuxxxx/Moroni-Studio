@@ -1,0 +1,3254 @@
+{
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.18.1",
+    "source_sha256": "87dc46cf9c030950004e7385e327f30026b129aeb13ee7a9def8f8d9180b2056"
+  },
+  "cases": [
+    {
+      "case": 0,
+      "seed": 1775,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.7177375886781239,
+        "jitter": 0.3325763979660677,
+        "seed": 1775
+      },
+      "params": {
+        "alpha": 1.0477950763868171,
+        "beta": 0.1661419961488052,
+        "gamma": 0.07985794912798104,
+        "kappa": 2,
+        "lam": 3.473865528482193
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1998697916666667
+    },
+    {
+      "case": 0,
+      "seed": 1775,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.7177375886781239,
+        "jitter": 0.3325763979660677,
+        "seed": 1775
+      },
+      "params": {
+        "alpha": 1.0477950763868171,
+        "beta": 0.1661419961488052,
+        "gamma": 0.07985794912798104,
+        "kappa": 2,
+        "lam": 3.473865528482193
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1953125
+    },
+    {
+      "case": 1,
+      "seed": 786,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6803700550331166,
+        "jitter": 0.5507514506681889,
+        "seed": 786
+      },
+      "params": {
+        "alpha": 0.7020184621980454,
+        "beta": 0.6837821175628399,
+        "gamma": 0.20603652157397073,
+        "kappa": 3,
+        "lam": 1.7458572732443527
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4182942708333333
+    },
+    {
+      "case": 1,
+      "seed": 786,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6803700550331166,
+        "jitter": 0.5507514506681889,
+        "seed": 786
+      },
+      "params": {
+        "alpha": 0.7020184621980454,
+        "beta": 0.6837821175628399,
+        "gamma": 0.20603652157397073,
+        "kappa": 3,
+        "lam": 1.7458572732443527
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.39697265625
+    },
+    {
+      "case": 2,
+      "seed": 3770,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.4162232572633617,
+        "jitter": 0.3197899909894051,
+        "seed": 3770
+      },
+      "params": {
+        "alpha": 0.15622884937051043,
+        "beta": 0.7024915121090136,
+        "gamma": 0.17264063648900058,
+        "kappa": 1,
+        "lam": 2.0303862389224534
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.6858723958333333
+    },
+    {
+      "case": 2,
+      "seed": 3770,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.4162232572633617,
+        "jitter": 0.3197899909894051,
+        "seed": 3770
+      },
+      "params": {
+        "alpha": 0.15622884937051043,
+        "beta": 0.7024915121090136,
+        "gamma": 0.17264063648900058,
+        "kappa": 1,
+        "lam": 2.0303862389224534
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.6590169270833333
+    },
+    {
+      "case": 3,
+      "seed": 1967,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.6313172316236058,
+        "jitter": 0.21253858628686095,
+        "seed": 1967
+      },
+      "params": {
+        "alpha": 0.24458651008407384,
+        "beta": 0.46745823776667994,
+        "gamma": 0.028221220131704593,
+        "kappa": 5,
+        "lam": 1.7006779396728477
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2109375
+    },
+    {
+      "case": 3,
+      "seed": 1967,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.6313172316236058,
+        "jitter": 0.21253858628686095,
+        "seed": 1967
+      },
+      "params": {
+        "alpha": 0.24458651008407384,
+        "beta": 0.46745823776667994,
+        "gamma": 0.028221220131704593,
+        "kappa": 5,
+        "lam": 1.7006779396728477
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1834309895833333
+    },
+    {
+      "case": 4,
+      "seed": 4861,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.5955900850911099,
+        "jitter": 0.1348887831294045,
+        "seed": 4861
+      },
+      "params": {
+        "alpha": 0.9579106176544725,
+        "beta": 0.08727417733165943,
+        "gamma": 0.19289663859116227,
+        "kappa": 2,
+        "lam": 1.1277574874354912
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4220377604166667
+    },
+    {
+      "case": 4,
+      "seed": 4861,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.5955900850911099,
+        "jitter": 0.1348887831294045,
+        "seed": 4861
+      },
+      "params": {
+        "alpha": 0.9579106176544725,
+        "beta": 0.08727417733165943,
+        "gamma": 0.19289663859116227,
+        "kappa": 2,
+        "lam": 1.1277574874354912
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.41845703125
+    },
+    {
+      "case": 5,
+      "seed": 88,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6105360173853515,
+        "jitter": 0.4260536446612403,
+        "seed": 88
+      },
+      "params": {
+        "alpha": 0.7517613741443125,
+        "beta": 0.523678294630318,
+        "gamma": 0.4034875170655972,
+        "kappa": 3,
+        "lam": 1.1730618660900791
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.9220377604166667
+    },
+    {
+      "case": 5,
+      "seed": 88,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6105360173853515,
+        "jitter": 0.4260536446612403,
+        "seed": 88
+      },
+      "params": {
+        "alpha": 0.7517613741443125,
+        "beta": 0.523678294630318,
+        "gamma": 0.4034875170655972,
+        "kappa": 3,
+        "lam": 1.1730618660900791
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.8986002604166667
+    },
+    {
+      "case": 6,
+      "seed": 8048,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5222062107534671,
+        "jitter": 0.5572108051348889,
+        "seed": 8048
+      },
+      "params": {
+        "alpha": 0.9606645763599612,
+        "beta": 0.6589987965376229,
+        "gamma": 0.11402390355060728,
+        "kappa": 3,
+        "lam": 2.2215423095125657
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.21240234375
+    },
+    {
+      "case": 6,
+      "seed": 8048,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5222062107534671,
+        "jitter": 0.5572108051348889,
+        "seed": 8048
+      },
+      "params": {
+        "alpha": 0.9606645763599612,
+        "beta": 0.6589987965376229,
+        "gamma": 0.11402390355060728,
+        "kappa": 3,
+        "lam": 2.2215423095125657
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1979166666666667
+    },
+    {
+      "case": 7,
+      "seed": 6406,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.30827588719364934,
+        "jitter": 0.5308623925102411,
+        "seed": 6406
+      },
+      "params": {
+        "alpha": 0.6565663956537094,
+        "beta": 0.12836977178035763,
+        "gamma": 0.10835163727556507,
+        "kappa": 3,
+        "lam": 0.9464546593614467
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3362630208333333
+    },
+    {
+      "case": 7,
+      "seed": 6406,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.30827588719364934,
+        "jitter": 0.5308623925102411,
+        "seed": 6406
+      },
+      "params": {
+        "alpha": 0.6565663956537094,
+        "beta": 0.12836977178035763,
+        "gamma": 0.10835163727556507,
+        "kappa": 3,
+        "lam": 0.9464546593614467
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3328450520833333
+    },
+    {
+      "case": 8,
+      "seed": 8459,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.37482280052055705,
+        "jitter": 0.40254340725714904,
+        "seed": 8459
+      },
+      "params": {
+        "alpha": 0.229920779259213,
+        "beta": 0.7751284639499613,
+        "gamma": 0.11355933162429623,
+        "kappa": 1,
+        "lam": 1.9304009922442564
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.35791015625
+    },
+    {
+      "case": 8,
+      "seed": 8459,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.37482280052055705,
+        "jitter": 0.40254340725714904,
+        "seed": 8459
+      },
+      "params": {
+        "alpha": 0.229920779259213,
+        "beta": 0.7751284639499613,
+        "gamma": 0.11355933162429623,
+        "kappa": 1,
+        "lam": 1.9304009922442564
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.33984375
+    },
+    {
+      "case": 9,
+      "seed": 3286,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6376101966817737,
+        "jitter": 0.3054041296069984,
+        "seed": 3286
+      },
+      "params": {
+        "alpha": 0.7957096961762623,
+        "beta": 0.7496564596427124,
+        "gamma": 0.197114025975907,
+        "kappa": 3,
+        "lam": 0.7439094817359648
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4269205729166667
+    },
+    {
+      "case": 9,
+      "seed": 3286,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6376101966817737,
+        "jitter": 0.3054041296069984,
+        "seed": 3286
+      },
+      "params": {
+        "alpha": 0.7957096961762623,
+        "beta": 0.7496564596427124,
+        "gamma": 0.197114025975907,
+        "kappa": 3,
+        "lam": 0.7439094817359648
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.4049479166666667
+    },
+    {
+      "case": 10,
+      "seed": 3374,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.7398366800213638,
+        "jitter": 0.11692857514104742,
+        "seed": 3374
+      },
+      "params": {
+        "alpha": 0.7389475458778294,
+        "beta": 0.5952653267068101,
+        "gamma": 0.40245254442910977,
+        "kappa": 3,
+        "lam": 1.5833427516953476
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.7731119791666667
+    },
+    {
+      "case": 10,
+      "seed": 3374,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.7398366800213638,
+        "jitter": 0.11692857514104742,
+        "seed": 3374
+      },
+      "params": {
+        "alpha": 0.7389475458778294,
+        "beta": 0.5952653267068101,
+        "gamma": 0.40245254442910977,
+        "kappa": 3,
+        "lam": 1.5833427516953476
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.74267578125
+    },
+    {
+      "case": 11,
+      "seed": 1901,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.41052408695212766,
+        "jitter": 0.41157942485283927,
+        "seed": 1901
+      },
+      "params": {
+        "alpha": 0.8622906318102086,
+        "beta": 0.6570420056885604,
+        "gamma": 0.028390098286426937,
+        "kappa": 2,
+        "lam": 1.3346323955518953
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.19287109375
+    },
+    {
+      "case": 11,
+      "seed": 1901,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.41052408695212766,
+        "jitter": 0.41157942485283927,
+        "seed": 1901
+      },
+      "params": {
+        "alpha": 0.8622906318102086,
+        "beta": 0.6570420056885604,
+        "gamma": 0.028390098286426937,
+        "kappa": 2,
+        "lam": 1.3346323955518953
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1842447916666667
+    },
+    {
+      "case": 12,
+      "seed": 3017,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.4056839907421848,
+        "jitter": 0.05901153988427499,
+        "seed": 3017
+      },
+      "params": {
+        "alpha": 0.9841355433167652,
+        "beta": 0.4717864764956733,
+        "gamma": 0.11185908296169682,
+        "kappa": 2,
+        "lam": 3.1662866453342877
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2698567708333333
+    },
+    {
+      "case": 12,
+      "seed": 3017,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.4056839907421848,
+        "jitter": 0.05901153988427499,
+        "seed": 3017
+      },
+      "params": {
+        "alpha": 0.9841355433167652,
+        "beta": 0.4717864764956733,
+        "gamma": 0.11185908296169682,
+        "kappa": 2,
+        "lam": 3.1662866453342877
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2609049479166667
+    },
+    {
+      "case": 13,
+      "seed": 929,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.7251339711254021,
+        "jitter": 0.1631529143077708,
+        "seed": 929
+      },
+      "params": {
+        "alpha": 0.5552770818325473,
+        "beta": 0.6656672725131889,
+        "gamma": 0.3402051153348439,
+        "kappa": 5,
+        "lam": 3.354266635754265
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 2.2262369791666665
+    },
+    {
+      "case": 13,
+      "seed": 929,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.7251339711254021,
+        "jitter": 0.1631529143077708,
+        "seed": 929
+      },
+      "params": {
+        "alpha": 0.5552770818325473,
+        "beta": 0.6656672725131889,
+        "gamma": 0.3402051153348439,
+        "kappa": 5,
+        "lam": 3.354266635754265
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 2.1761067708333335
+    },
+    {
+      "case": 14,
+      "seed": 2718,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5496964844004463,
+        "jitter": 0.389440953503608,
+        "seed": 2718
+      },
+      "params": {
+        "alpha": 0.5087190279834944,
+        "beta": 1.0714981742119076,
+        "gamma": 0.07015550298176242,
+        "kappa": 2,
+        "lam": 0.8881120077687592
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.19970703125
+    },
+    {
+      "case": 14,
+      "seed": 2718,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5496964844004463,
+        "jitter": 0.389440953503608,
+        "seed": 2718
+      },
+      "params": {
+        "alpha": 0.5087190279834944,
+        "beta": 1.0714981742119076,
+        "gamma": 0.07015550298176242,
+        "kappa": 2,
+        "lam": 0.8881120077687592
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.18115234375
+    },
+    {
+      "case": 15,
+      "seed": 8443,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.7869999044149812,
+        "jitter": 0.18163479641812477,
+        "seed": 8443
+      },
+      "params": {
+        "alpha": 0.14292152127472302,
+        "beta": 0.15336977197001134,
+        "gamma": 0.4434906784309479,
+        "kappa": 1,
+        "lam": 3.209014011748932
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 4.851888020833333
+    },
+    {
+      "case": 15,
+      "seed": 8443,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.7869999044149812,
+        "jitter": 0.18163479641812477,
+        "seed": 8443
+      },
+      "params": {
+        "alpha": 0.14292152127472302,
+        "beta": 0.15336977197001134,
+        "gamma": 0.4434906784309479,
+        "kappa": 1,
+        "lam": 3.209014011748932
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 4.8056640625
+    },
+    {
+      "case": 16,
+      "seed": 9244,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.43147147873038544,
+        "jitter": 0.5992680173193872,
+        "seed": 9244
+      },
+      "params": {
+        "alpha": 0.13738410742865007,
+        "beta": 0.06620689787804013,
+        "gamma": 0.25275244812873854,
+        "kappa": 2,
+        "lam": 3.5881079610762323
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 3.8580729166666665
+    },
+    {
+      "case": 16,
+      "seed": 9244,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.43147147873038544,
+        "jitter": 0.5992680173193872,
+        "seed": 9244
+      },
+      "params": {
+        "alpha": 0.13738410742865007,
+        "beta": 0.06620689787804013,
+        "gamma": 0.25275244812873854,
+        "kappa": 2,
+        "lam": 3.5881079610762323
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 3.83984375
+    },
+    {
+      "case": 17,
+      "seed": 3346,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.31295390311670235,
+        "jitter": 0.02217621439538724,
+        "seed": 3346
+      },
+      "params": {
+        "alpha": 0.4232109221919117,
+        "beta": 0.6308791154635891,
+        "gamma": 0.44425158989185876,
+        "kappa": 5,
+        "lam": 3.873895323836609
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 2.2283528645833335
+    },
+    {
+      "case": 17,
+      "seed": 3346,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.31295390311670235,
+        "jitter": 0.02217621439538724,
+        "seed": 3346
+      },
+      "params": {
+        "alpha": 0.4232109221919117,
+        "beta": 0.6308791154635891,
+        "gamma": 0.44425158989185876,
+        "kappa": 5,
+        "lam": 3.873895323836609
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 2.2073567708333335
+    },
+    {
+      "case": 18,
+      "seed": 7706,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.6863895815706329,
+        "jitter": 0.43889344456364804,
+        "seed": 7706
+      },
+      "params": {
+        "alpha": 0.6406598129937201,
+        "beta": 1.282219708989867,
+        "gamma": 0.24778728822795112,
+        "kappa": 6,
+        "lam": 0.4830514352545945
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.41943359375
+    },
+    {
+      "case": 18,
+      "seed": 7706,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.6863895815706329,
+        "jitter": 0.43889344456364804,
+        "seed": 7706
+      },
+      "params": {
+        "alpha": 0.6406598129937201,
+        "beta": 1.282219708989867,
+        "gamma": 0.24778728822795112,
+        "kappa": 6,
+        "lam": 0.4830514352545945
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.384765625
+    },
+    {
+      "case": 19,
+      "seed": 4453,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7352425431303742,
+        "jitter": 0.35854695736190373,
+        "seed": 4453
+      },
+      "params": {
+        "alpha": 0.6876971094456498,
+        "beta": 1.494107669414487,
+        "gamma": 0.19549968005904825,
+        "kappa": 2,
+        "lam": 0.4812085230703423
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3170572916666667
+    },
+    {
+      "case": 19,
+      "seed": 4453,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7352425431303742,
+        "jitter": 0.35854695736190373,
+        "seed": 4453
+      },
+      "params": {
+        "alpha": 0.6876971094456498,
+        "beta": 1.494107669414487,
+        "gamma": 0.19549968005904825,
+        "kappa": 2,
+        "lam": 0.4812085230703423
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2820638020833333
+    },
+    {
+      "case": 20,
+      "seed": 4038,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.37684540808727957,
+        "jitter": 0.20094746447060266,
+        "seed": 4038
+      },
+      "params": {
+        "alpha": 0.11628958468220299,
+        "beta": 0.9539580074028793,
+        "gamma": 0.0839779912153492,
+        "kappa": 3,
+        "lam": 3.1952848336790622
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2789713541666667
+    },
+    {
+      "case": 20,
+      "seed": 4038,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.37684540808727957,
+        "jitter": 0.20094746447060266,
+        "seed": 4038
+      },
+      "params": {
+        "alpha": 0.11628958468220299,
+        "beta": 0.9539580074028793,
+        "gamma": 0.0839779912153492,
+        "kappa": 3,
+        "lam": 3.1952848336790622
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2599283854166667
+    },
+    {
+      "case": 21,
+      "seed": 1192,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.7085164825339332,
+        "jitter": 0.4204908636274285,
+        "seed": 1192
+      },
+      "params": {
+        "alpha": 0.38335097796866124,
+        "beta": 1.069274815171078,
+        "gamma": 0.2739178770976875,
+        "kappa": 3,
+        "lam": 3.878341856919374
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.7023111979166667
+    },
+    {
+      "case": 21,
+      "seed": 1192,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.7085164825339332,
+        "jitter": 0.4204908636274285,
+        "seed": 1192
+      },
+      "params": {
+        "alpha": 0.38335097796866124,
+        "beta": 1.069274815171078,
+        "gamma": 0.2739178770976875,
+        "kappa": 3,
+        "lam": 3.878341856919374
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.6560872395833333
+    },
+    {
+      "case": 22,
+      "seed": 335,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.800328683763347,
+        "jitter": 0.39019413744373255,
+        "seed": 335
+      },
+      "params": {
+        "alpha": 0.9434906555600877,
+        "beta": 1.0473269533583922,
+        "gamma": 0.14516440611031714,
+        "kappa": 6,
+        "lam": 2.6998625670780614
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.25537109375
+    },
+    {
+      "case": 22,
+      "seed": 335,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.800328683763347,
+        "jitter": 0.39019413744373255,
+        "seed": 335
+      },
+      "params": {
+        "alpha": 0.9434906555600877,
+        "beta": 1.0473269533583922,
+        "gamma": 0.14516440611031714,
+        "kappa": 6,
+        "lam": 2.6998625670780614
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2333984375
+    },
+    {
+      "case": 23,
+      "seed": 7817,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.49396479181097364,
+        "jitter": 0.46143642982864624,
+        "seed": 7817
+      },
+      "params": {
+        "alpha": 0.28476945414638377,
+        "beta": 1.0804321023830883,
+        "gamma": 0.4135496993388037,
+        "kappa": 5,
+        "lam": 3.2557675156336012
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.97265625
+    },
+    {
+      "case": 23,
+      "seed": 7817,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.49396479181097364,
+        "jitter": 0.46143642982864624,
+        "seed": 7817
+      },
+      "params": {
+        "alpha": 0.28476945414638377,
+        "beta": 1.0804321023830883,
+        "gamma": 0.4135496993388037,
+        "kappa": 5,
+        "lam": 3.2557675156336012
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.9295247395833333
+    },
+    {
+      "case": 24,
+      "seed": 7279,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.43591324332751624,
+        "jitter": 0.0862949080219955,
+        "seed": 7279
+      },
+      "params": {
+        "alpha": 0.4253963721476115,
+        "beta": 0.14509326587654048,
+        "gamma": 0.17620042601038702,
+        "kappa": 6,
+        "lam": 3.89063056857161
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.7731119791666667
+    },
+    {
+      "case": 24,
+      "seed": 7279,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.43591324332751624,
+        "jitter": 0.0862949080219955,
+        "seed": 7279
+      },
+      "params": {
+        "alpha": 0.4253963721476115,
+        "beta": 0.14509326587654048,
+        "gamma": 0.17620042601038702,
+        "kappa": 6,
+        "lam": 3.89063056857161
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.763671875
+    },
+    {
+      "case": 25,
+      "seed": 2451,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.6648059293280055,
+        "jitter": 0.3620625775777998,
+        "seed": 2451
+      },
+      "params": {
+        "alpha": 0.4894913246554823,
+        "beta": 1.257422989475606,
+        "gamma": 0.0630275589585912,
+        "kappa": 1,
+        "lam": 0.4810115788540923
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2439778645833333
+    },
+    {
+      "case": 25,
+      "seed": 2451,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.6648059293280055,
+        "jitter": 0.3620625775777998,
+        "seed": 2451
+      },
+      "params": {
+        "alpha": 0.4894913246554823,
+        "beta": 1.257422989475606,
+        "gamma": 0.0630275589585912,
+        "kappa": 1,
+        "lam": 0.4810115788540923
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2161458333333333
+    },
+    {
+      "case": 26,
+      "seed": 1631,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5981675555294342,
+        "jitter": 0.03021188378802404,
+        "seed": 1631
+      },
+      "params": {
+        "alpha": 0.6491480364870994,
+        "beta": 0.4087950869780833,
+        "gamma": 0.09365918355692768,
+        "kappa": 1,
+        "lam": 3.594450561813182
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2981770833333333
+    },
+    {
+      "case": 26,
+      "seed": 1631,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5981675555294342,
+        "jitter": 0.03021188378802404,
+        "seed": 1631
+      },
+      "params": {
+        "alpha": 0.6491480364870994,
+        "beta": 0.4087950869780833,
+        "gamma": 0.09365918355692768,
+        "kappa": 1,
+        "lam": 3.594450561813182
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2830403645833333
+    },
+    {
+      "case": 27,
+      "seed": 8886,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.45014892004138396,
+        "jitter": 0.11182769016986051,
+        "seed": 8886
+      },
+      "params": {
+        "alpha": 0.5673679977119853,
+        "beta": 0.2072901023973004,
+        "gamma": 0.077040646381292,
+        "kappa": 4,
+        "lam": 0.3726623923356495
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.34521484375
+    },
+    {
+      "case": 27,
+      "seed": 8886,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.45014892004138396,
+        "jitter": 0.11182769016986051,
+        "seed": 8886
+      },
+      "params": {
+        "alpha": 0.5673679977119853,
+        "beta": 0.2072901023973004,
+        "gamma": 0.077040646381292,
+        "kappa": 4,
+        "lam": 0.3726623923356495
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3343098958333333
+    },
+    {
+      "case": 28,
+      "seed": 6209,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6568131209651478,
+        "jitter": 0.20352084702976783,
+        "seed": 6209
+      },
+      "params": {
+        "alpha": 1.1994022531943047,
+        "beta": 0.5676023498882358,
+        "gamma": 0.03983281358970566,
+        "kappa": 2,
+        "lam": 1.1366434966101775
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1608072916666667
+    },
+    {
+      "case": 28,
+      "seed": 6209,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6568131209651478,
+        "jitter": 0.20352084702976783,
+        "seed": 6209
+      },
+      "params": {
+        "alpha": 1.1994022531943047,
+        "beta": 0.5676023498882358,
+        "gamma": 0.03983281358970566,
+        "kappa": 2,
+        "lam": 1.1366434966101775
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1497395833333333
+    },
+    {
+      "case": 29,
+      "seed": 6509,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5808476369168294,
+        "jitter": 0.03779825093023208,
+        "seed": 6509
+      },
+      "params": {
+        "alpha": 0.27257955837428477,
+        "beta": 0.012186119877630186,
+        "gamma": 0.3977754605734074,
+        "kappa": 1,
+        "lam": 1.1775479192697313
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 4.240885416666667
+    },
+    {
+      "case": 29,
+      "seed": 6509,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5808476369168294,
+        "jitter": 0.03779825093023208,
+        "seed": 6509
+      },
+      "params": {
+        "alpha": 0.27257955837428477,
+        "beta": 0.012186119877630186,
+        "gamma": 0.3977754605734074,
+        "kappa": 1,
+        "lam": 1.1775479192697313
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 4.237467447916667
+    },
+    {
+      "case": 30,
+      "seed": 2103,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.4112845618645704,
+        "jitter": 0.5139445206563832,
+        "seed": 2103
+      },
+      "params": {
+        "alpha": 0.6852918401006568,
+        "beta": 0.41492440832083544,
+        "gamma": 0.0742123330976198,
+        "kappa": 1,
+        "lam": 1.6835463768336916
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.18994140625
+    },
+    {
+      "case": 30,
+      "seed": 2103,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.4112845618645704,
+        "jitter": 0.5139445206563832,
+        "seed": 2103
+      },
+      "params": {
+        "alpha": 0.6852918401006568,
+        "beta": 0.41492440832083544,
+        "gamma": 0.0742123330976198,
+        "kappa": 1,
+        "lam": 1.6835463768336916
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.18408203125
+    },
+    {
+      "case": 31,
+      "seed": 8308,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.4473380719314652,
+        "jitter": 0.31977147587100163,
+        "seed": 8308
+      },
+      "params": {
+        "alpha": 0.3443029282270998,
+        "beta": 1.1923339819507286,
+        "gamma": 0.19163455954783212,
+        "kappa": 5,
+        "lam": 3.3459505371543883
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3753255208333333
+    },
+    {
+      "case": 31,
+      "seed": 8308,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.4473380719314652,
+        "jitter": 0.31977147587100163,
+        "seed": 8308
+      },
+      "params": {
+        "alpha": 0.3443029282270998,
+        "beta": 1.1923339819507286,
+        "gamma": 0.19163455954783212,
+        "kappa": 5,
+        "lam": 3.3459505371543883
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3517252604166667
+    },
+    {
+      "case": 32,
+      "seed": 2105,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7625436420324103,
+        "jitter": 0.3473777238543235,
+        "seed": 2105
+      },
+      "params": {
+        "alpha": 0.5775411570100862,
+        "beta": 0.7923129631637209,
+        "gamma": 0.1454633785736375,
+        "kappa": 4,
+        "lam": 2.9458209398640443
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3289388020833333
+    },
+    {
+      "case": 32,
+      "seed": 2105,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7625436420324103,
+        "jitter": 0.3473777238543235,
+        "seed": 2105
+      },
+      "params": {
+        "alpha": 0.5775411570100862,
+        "beta": 0.7923129631637209,
+        "gamma": 0.1454633785736375,
+        "kappa": 4,
+        "lam": 2.9458209398640443
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2976888020833333
+    },
+    {
+      "case": 33,
+      "seed": 7116,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.4936469281509948,
+        "jitter": 0.531967684847036,
+        "seed": 7116
+      },
+      "params": {
+        "alpha": 1.0261121800646726,
+        "beta": 1.1062831659383696,
+        "gamma": 0.15865672953336843,
+        "kappa": 2,
+        "lam": 0.6291519896268385
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.38916015625
+    },
+    {
+      "case": 33,
+      "seed": 7116,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.4936469281509948,
+        "jitter": 0.531967684847036,
+        "seed": 7116
+      },
+      "params": {
+        "alpha": 1.0261121800646726,
+        "beta": 1.1062831659383696,
+        "gamma": 0.15865672953336843,
+        "kappa": 2,
+        "lam": 0.6291519896268385
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3675130208333333
+    },
+    {
+      "case": 34,
+      "seed": 3054,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.4718500701447882,
+        "jitter": 0.5810945576123374,
+        "seed": 3054
+      },
+      "params": {
+        "alpha": 0.5129140635362965,
+        "beta": 0.7010230785705993,
+        "gamma": 0.15383122530478072,
+        "kappa": 2,
+        "lam": 2.4411817727551166
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3216145833333333
+    },
+    {
+      "case": 34,
+      "seed": 3054,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.4718500701447882,
+        "jitter": 0.5810945576123374,
+        "seed": 3054
+      },
+      "params": {
+        "alpha": 0.5129140635362965,
+        "beta": 0.7010230785705993,
+        "gamma": 0.15383122530478072,
+        "kappa": 2,
+        "lam": 2.4411817727551166
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3046875
+    },
+    {
+      "case": 35,
+      "seed": 7754,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.31114518177899075,
+        "jitter": 0.5223135872071933,
+        "seed": 7754
+      },
+      "params": {
+        "alpha": 0.565500852704607,
+        "beta": 0.9238805083994011,
+        "gamma": 0.09498541178317592,
+        "kappa": 4,
+        "lam": 3.558173880846835
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1695963541666667
+    },
+    {
+      "case": 35,
+      "seed": 7754,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.31114518177899075,
+        "jitter": 0.5223135872071933,
+        "seed": 7754
+      },
+      "params": {
+        "alpha": 0.565500852704607,
+        "beta": 0.9238805083994011,
+        "gamma": 0.09498541178317592,
+        "kappa": 4,
+        "lam": 3.558173880846835
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1593424479166667
+    },
+    {
+      "case": 36,
+      "seed": 7619,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.5759232346113986,
+        "jitter": 0.4373841194661336,
+        "seed": 7619
+      },
+      "params": {
+        "alpha": 0.9042169907557274,
+        "beta": 1.0865770478822372,
+        "gamma": 0.3286091420230231,
+        "kappa": 2,
+        "lam": 1.068329250241447
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.5760091145833333
+    },
+    {
+      "case": 36,
+      "seed": 7619,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.5759232346113986,
+        "jitter": 0.4373841194661336,
+        "seed": 7619
+      },
+      "params": {
+        "alpha": 0.9042169907557274,
+        "beta": 1.0865770478822372,
+        "gamma": 0.3286091420230231,
+        "kappa": 2,
+        "lam": 1.068329250241447
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.5489908854166667
+    },
+    {
+      "case": 37,
+      "seed": 7343,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.45185132410727563,
+        "jitter": 0.330131001589468,
+        "seed": 7343
+      },
+      "params": {
+        "alpha": 0.19762356358265795,
+        "beta": 0.2777599090112286,
+        "gamma": 0.39831146121058564,
+        "kappa": 2,
+        "lam": 2.7227252497738292
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 3.5013020833333335
+    },
+    {
+      "case": 37,
+      "seed": 7343,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.45185132410727563,
+        "jitter": 0.330131001589468,
+        "seed": 7343
+      },
+      "params": {
+        "alpha": 0.19762356358265795,
+        "beta": 0.2777599090112286,
+        "gamma": 0.39831146121058564,
+        "kappa": 2,
+        "lam": 2.7227252497738292
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 3.4646809895833335
+    },
+    {
+      "case": 38,
+      "seed": 9505,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.40787097052198634,
+        "jitter": 0.3721655850007724,
+        "seed": 9505
+      },
+      "params": {
+        "alpha": 0.26974369534348663,
+        "beta": 0.38600046683934813,
+        "gamma": 0.17779866474056863,
+        "kappa": 3,
+        "lam": 3.0088854002825207
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.7041015625
+    },
+    {
+      "case": 38,
+      "seed": 9505,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.40787097052198634,
+        "jitter": 0.3721655850007724,
+        "seed": 9505
+      },
+      "params": {
+        "alpha": 0.26974369534348663,
+        "beta": 0.38600046683934813,
+        "gamma": 0.17779866474056863,
+        "kappa": 3,
+        "lam": 3.0088854002825207
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.68408203125
+    },
+    {
+      "case": 39,
+      "seed": 7301,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5303606170914886,
+        "jitter": 0.189284392038006,
+        "seed": 7301
+      },
+      "params": {
+        "alpha": 1.0537117826818796,
+        "beta": 0.8531901219415584,
+        "gamma": 0.1519187370494993,
+        "kappa": 1,
+        "lam": 2.9452860012589634
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.23583984375
+    },
+    {
+      "case": 39,
+      "seed": 7301,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5303606170914886,
+        "jitter": 0.189284392038006,
+        "seed": 7301
+      },
+      "params": {
+        "alpha": 1.0537117826818796,
+        "beta": 0.8531901219415584,
+        "gamma": 0.1519187370494993,
+        "kappa": 1,
+        "lam": 2.9452860012589634
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.22216796875
+    },
+    {
+      "case": 40,
+      "seed": 900,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.5282426106078888,
+        "jitter": 0.36258560343784835,
+        "seed": 900
+      },
+      "params": {
+        "alpha": 0.7504730756818871,
+        "beta": 0.8866356780957172,
+        "gamma": 0.39958541256342367,
+        "kappa": 6,
+        "lam": 0.2899525581954362
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.6975911458333333
+    },
+    {
+      "case": 40,
+      "seed": 900,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.5282426106078888,
+        "jitter": 0.36258560343784835,
+        "seed": 900
+      },
+      "params": {
+        "alpha": 0.7504730756818871,
+        "beta": 0.8866356780957172,
+        "gamma": 0.39958541256342367,
+        "kappa": 6,
+        "lam": 0.2899525581954362
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.6788736979166667
+    },
+    {
+      "case": 41,
+      "seed": 7815,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.5820120384242553,
+        "jitter": 0.17424599430642243,
+        "seed": 7815
+      },
+      "params": {
+        "alpha": 0.5363648560561007,
+        "beta": 0.4416147784833206,
+        "gamma": 0.194321572519586,
+        "kappa": 4,
+        "lam": 3.885764152242425
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4757486979166667
+    },
+    {
+      "case": 41,
+      "seed": 7815,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.5820120384242553,
+        "jitter": 0.17424599430642243,
+        "seed": 7815
+      },
+      "params": {
+        "alpha": 0.5363648560561007,
+        "beta": 0.4416147784833206,
+        "gamma": 0.194321572519586,
+        "kappa": 4,
+        "lam": 3.885764152242425
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.4557291666666667
+    },
+    {
+      "case": 42,
+      "seed": 3416,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.6332880645931653,
+        "jitter": 0.519802530198542,
+        "seed": 3416
+      },
+      "params": {
+        "alpha": 0.5846855682655462,
+        "beta": 0.1082787903769542,
+        "gamma": 0.11166410494449766,
+        "kappa": 4,
+        "lam": 1.8845715678968653
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.5050455729166667
+    },
+    {
+      "case": 42,
+      "seed": 3416,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.6332880645931653,
+        "jitter": 0.519802530198542,
+        "seed": 3416
+      },
+      "params": {
+        "alpha": 0.5846855682655462,
+        "beta": 0.1082787903769542,
+        "gamma": 0.11166410494449766,
+        "kappa": 4,
+        "lam": 1.8845715678968653
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.49560546875
+    },
+    {
+      "case": 43,
+      "seed": 7337,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6150988697304239,
+        "jitter": 0.059534803592665074,
+        "seed": 7337
+      },
+      "params": {
+        "alpha": 0.3366810079298481,
+        "beta": 0.9649822820915819,
+        "gamma": 0.06316509489435566,
+        "kappa": 5,
+        "lam": 3.268688220304555
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.2037760416666667
+    },
+    {
+      "case": 43,
+      "seed": 7337,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6150988697304239,
+        "jitter": 0.059534803592665074,
+        "seed": 7337
+      },
+      "params": {
+        "alpha": 0.3366810079298481,
+        "beta": 0.9649822820915819,
+        "gamma": 0.06316509489435566,
+        "kappa": 5,
+        "lam": 3.268688220304555
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1767578125
+    },
+    {
+      "case": 44,
+      "seed": 8322,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.42276049854848624,
+        "jitter": 0.29231587982683827,
+        "seed": 8322
+      },
+      "params": {
+        "alpha": 1.1380083603904814,
+        "beta": 0.3373773630171834,
+        "gamma": 0.1034393405618696,
+        "kappa": 5,
+        "lam": 0.27079293786864805
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1920572916666667
+    },
+    {
+      "case": 44,
+      "seed": 8322,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.42276049854848624,
+        "jitter": 0.29231587982683827,
+        "seed": 8322
+      },
+      "params": {
+        "alpha": 1.1380083603904814,
+        "beta": 0.3373773630171834,
+        "gamma": 0.1034393405618696,
+        "kappa": 5,
+        "lam": 0.27079293786864805
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1866861979166667
+    },
+    {
+      "case": 45,
+      "seed": 7821,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5041978420020933,
+        "jitter": 0.056494385515933374,
+        "seed": 7821
+      },
+      "params": {
+        "alpha": 1.0195839028530373,
+        "beta": 0.8155660752723284,
+        "gamma": 0.02091885907693039,
+        "kappa": 1,
+        "lam": 1.7418628273931431
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.140625
+    },
+    {
+      "case": 45,
+      "seed": 7821,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.5041978420020933,
+        "jitter": 0.056494385515933374,
+        "seed": 7821
+      },
+      "params": {
+        "alpha": 1.0195839028530373,
+        "beta": 0.8155660752723284,
+        "gamma": 0.02091885907693039,
+        "kappa": 1,
+        "lam": 1.7418628273931431
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1305338541666667
+    },
+    {
+      "case": 46,
+      "seed": 7915,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5732899768556459,
+        "jitter": 0.450383993332533,
+        "seed": 7915
+      },
+      "params": {
+        "alpha": 0.12387393331663843,
+        "beta": 0.1378755529933196,
+        "gamma": 0.3042978274764864,
+        "kappa": 1,
+        "lam": 2.796211309714811
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 4.323079427083333
+    },
+    {
+      "case": 46,
+      "seed": 7915,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.5732899768556459,
+        "jitter": 0.450383993332533,
+        "seed": 7915
+      },
+      "params": {
+        "alpha": 0.12387393331663843,
+        "beta": 0.1378755529933196,
+        "gamma": 0.3042978274764864,
+        "kappa": 1,
+        "lam": 2.796211309714811
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 4.295247395833333
+    },
+    {
+      "case": 47,
+      "seed": 9681,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.8173718680429456,
+        "jitter": 0.5158641769038842,
+        "seed": 9681
+      },
+      "params": {
+        "alpha": 0.9811279288482879,
+        "beta": 0.02239059884954242,
+        "gamma": 0.17196703813868075,
+        "kappa": 2,
+        "lam": 1.0737372280069613
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.38720703125
+    },
+    {
+      "case": 47,
+      "seed": 9681,
+      "sides": 3,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 3,
+        "radius": 0.8173718680429456,
+        "jitter": 0.5158641769038842,
+        "seed": 9681
+      },
+      "params": {
+        "alpha": 0.9811279288482879,
+        "beta": 0.02239059884954242,
+        "gamma": 0.17196703813868075,
+        "kappa": 2,
+        "lam": 1.0737372280069613
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3859049479166667
+    },
+    {
+      "case": 48,
+      "seed": 4129,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.460340199318919,
+        "jitter": 0.2318231954803661,
+        "seed": 4129
+      },
+      "params": {
+        "alpha": 0.2592563097164938,
+        "beta": 1.1990195980845608,
+        "gamma": 0.299048107118423,
+        "kappa": 4,
+        "lam": 1.4463829863321873
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.8196614583333333
+    },
+    {
+      "case": 48,
+      "seed": 4129,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.460340199318919,
+        "jitter": 0.2318231954803661,
+        "seed": 4129
+      },
+      "params": {
+        "alpha": 0.2592563097164938,
+        "beta": 1.1990195980845608,
+        "gamma": 0.299048107118423,
+        "kappa": 4,
+        "lam": 1.4463829863321873
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.7923177083333333
+    },
+    {
+      "case": 49,
+      "seed": 2325,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6473371139933612,
+        "jitter": 0.44852304258795234,
+        "seed": 2325
+      },
+      "params": {
+        "alpha": 0.4033900892419754,
+        "beta": 0.11102905696669135,
+        "gamma": 0.42556087125568093,
+        "kappa": 4,
+        "lam": 2.7797257985280757
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 3.4635416666666665
+    },
+    {
+      "case": 49,
+      "seed": 2325,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.6473371139933612,
+        "jitter": 0.44852304258795234,
+        "seed": 2325
+      },
+      "params": {
+        "alpha": 0.4033900892419754,
+        "beta": 0.11102905696669135,
+        "gamma": 0.42556087125568093,
+        "kappa": 4,
+        "lam": 2.7797257985280757
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 3.4446614583333335
+    },
+    {
+      "case": 50,
+      "seed": 2398,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.30663157507347893,
+        "jitter": 0.2452568302794572,
+        "seed": 2398
+      },
+      "params": {
+        "alpha": 1.0946248256393836,
+        "beta": 1.4048996003418013,
+        "gamma": 0.2731686586438005,
+        "kappa": 2,
+        "lam": 1.0052294395113004
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3271484375
+    },
+    {
+      "case": 50,
+      "seed": 2398,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.30663157507347893,
+        "jitter": 0.2452568302794572,
+        "seed": 2398
+      },
+      "params": {
+        "alpha": 1.0946248256393836,
+        "beta": 1.4048996003418013,
+        "gamma": 0.2731686586438005,
+        "kappa": 2,
+        "lam": 1.0052294395113004
+      },
+      "query_offset": [
+        -2,
+        2
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3157552083333333
+    },
+    {
+      "case": 51,
+      "seed": 5912,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.5384588303887469,
+        "jitter": 0.10898071894777177,
+        "seed": 5912
+      },
+      "params": {
+        "alpha": 0.16639200855580297,
+        "beta": 0.23429567784943656,
+        "gamma": 0.12260860208289912,
+        "kappa": 6,
+        "lam": 3.72786437767622
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.8134765625
+    },
+    {
+      "case": 51,
+      "seed": 5912,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.5384588303887469,
+        "jitter": 0.10898071894777177,
+        "seed": 5912
+      },
+      "params": {
+        "alpha": 0.16639200855580297,
+        "beta": 0.23429567784943656,
+        "gamma": 0.12260860208289912,
+        "kappa": 6,
+        "lam": 3.72786437767622
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.7841796875
+    },
+    {
+      "case": 52,
+      "seed": 684,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6664016457111157,
+        "jitter": 0.059281075441654126,
+        "seed": 684
+      },
+      "params": {
+        "alpha": 0.8176113652824434,
+        "beta": 1.3366538480297443,
+        "gamma": 0.011669982999968931,
+        "kappa": 4,
+        "lam": 3.383411558534898
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1884765625
+    },
+    {
+      "case": 52,
+      "seed": 684,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.6664016457111157,
+        "jitter": 0.059281075441654126,
+        "seed": 684
+      },
+      "params": {
+        "alpha": 0.8176113652824434,
+        "beta": 1.3366538480297443,
+        "gamma": 0.011669982999968931,
+        "kappa": 4,
+        "lam": 3.383411558534898
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1661783854166667
+    },
+    {
+      "case": 53,
+      "seed": 2923,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.35907345261133905,
+        "jitter": 0.5517818711107573,
+        "seed": 2923
+      },
+      "params": {
+        "alpha": 1.0986856548131412,
+        "beta": 0.7980727860751842,
+        "gamma": 0.36335521800748344,
+        "kappa": 3,
+        "lam": 3.8211624158411355
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4768880208333333
+    },
+    {
+      "case": 53,
+      "seed": 2923,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.35907345261133905,
+        "jitter": 0.5517818711107573,
+        "seed": 2923
+      },
+      "params": {
+        "alpha": 1.0986856548131412,
+        "beta": 0.7980727860751842,
+        "gamma": 0.36335521800748344,
+        "kappa": 3,
+        "lam": 3.8211624158411355
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.4666341145833333
+    },
+    {
+      "case": 54,
+      "seed": 9537,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.7514947275870614,
+        "jitter": 0.14452538143772237,
+        "seed": 9537
+      },
+      "params": {
+        "alpha": 0.3987519726915151,
+        "beta": 0.9833198084814804,
+        "gamma": 0.14417631766616415,
+        "kappa": 1,
+        "lam": 1.0043825356187315
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.3720703125
+    },
+    {
+      "case": 54,
+      "seed": 9537,
+      "sides": 7,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 7,
+        "radius": 0.7514947275870614,
+        "jitter": 0.14452538143772237,
+        "seed": 9537
+      },
+      "params": {
+        "alpha": 0.3987519726915151,
+        "beta": 0.9833198084814804,
+        "gamma": 0.14417631766616415,
+        "kappa": 1,
+        "lam": 1.0043825356187315
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3304036458333333
+    },
+    {
+      "case": 55,
+      "seed": 2341,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.6965529370697255,
+        "jitter": 0.005242200928387097,
+        "seed": 2341
+      },
+      "params": {
+        "alpha": 0.9423100333206831,
+        "beta": 1.0689392385350929,
+        "gamma": 0.21202371939096518,
+        "kappa": 4,
+        "lam": 2.2225557978457116
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.38330078125
+    },
+    {
+      "case": 55,
+      "seed": 2341,
+      "sides": 6,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 6,
+        "radius": 0.6965529370697255,
+        "jitter": 0.005242200928387097,
+        "seed": 2341
+      },
+      "params": {
+        "alpha": 0.9423100333206831,
+        "beta": 1.0689392385350929,
+        "gamma": 0.21202371939096518,
+        "kappa": 4,
+        "lam": 2.2225557978457116
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.3543294270833333
+    },
+    {
+      "case": 56,
+      "seed": 3820,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.8230533446658364,
+        "jitter": 0.15153537156040636,
+        "seed": 3820
+      },
+      "params": {
+        "alpha": 0.4279231919884431,
+        "beta": 0.18245826186575193,
+        "gamma": 0.34455739489999265,
+        "kappa": 2,
+        "lam": 2.651097476226229
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 2.67919921875
+    },
+    {
+      "case": 56,
+      "seed": 3820,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.8230533446658364,
+        "jitter": 0.15153537156040636,
+        "seed": 3820
+      },
+      "params": {
+        "alpha": 0.4279231919884431,
+        "beta": 0.18245826186575193,
+        "gamma": 0.34455739489999265,
+        "kappa": 2,
+        "lam": 2.651097476226229
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 2.6492513020833335
+    },
+    {
+      "case": 57,
+      "seed": 6738,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.47585286638201807,
+        "jitter": 0.005115464102429424,
+        "seed": 6738
+      },
+      "params": {
+        "alpha": 1.0482441768748845,
+        "beta": 0.6923243292013075,
+        "gamma": 0.04508024048159131,
+        "kappa": 1,
+        "lam": 2.1441695103244465
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.1463216145833333
+    },
+    {
+      "case": 57,
+      "seed": 6738,
+      "sides": 5,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 5,
+        "radius": 0.47585286638201807,
+        "jitter": 0.005115464102429424,
+        "seed": 6738
+      },
+      "params": {
+        "alpha": 1.0482441768748845,
+        "beta": 0.6923243292013075,
+        "gamma": 0.04508024048159131,
+        "kappa": 1,
+        "lam": 2.1441695103244465
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.1349283854166667
+    },
+    {
+      "case": 58,
+      "seed": 5952,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.7186875747984542,
+        "jitter": 0.32109001511932533,
+        "seed": 5952
+      },
+      "params": {
+        "alpha": 0.26280778043047337,
+        "beta": 1.3545534790950478,
+        "gamma": 0.05081041755323772,
+        "kappa": 4,
+        "lam": 3.380625510602057
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.4690755208333333
+    },
+    {
+      "case": 58,
+      "seed": 5952,
+      "sides": 4,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 4,
+        "radius": 0.7186875747984542,
+        "jitter": 0.32109001511932533,
+        "seed": 5952
+      },
+      "params": {
+        "alpha": 0.26280778043047337,
+        "beta": 1.3545534790950478,
+        "gamma": 0.05081041755323772,
+        "kappa": 4,
+        "lam": 3.380625510602057
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.4215494791666667
+    },
+    {
+      "case": 59,
+      "seed": 5426,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7595034626108259,
+        "jitter": 0.4588114193980014,
+        "seed": 5426
+      },
+      "params": {
+        "alpha": 1.090282006731372,
+        "beta": 0.6016858597213572,
+        "gamma": 0.15739624162618848,
+        "kappa": 2,
+        "lam": 3.1000555953291964
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": false,
+      "mismatch": 0,
+      "mean_candidates": 1.26513671875
+    },
+    {
+      "case": 59,
+      "seed": 5426,
+      "sides": 8,
+      "field_params": {
+        "rows": 4,
+        "cols": 6,
+        "sides": 8,
+        "radius": 0.7595034626108259,
+        "jitter": 0.4588114193980014,
+        "seed": 5426
+      },
+      "params": {
+        "alpha": 1.090282006731372,
+        "beta": 0.6016858597213572,
+        "gamma": 0.15739624162618848,
+        "kappa": 2,
+        "lam": 3.1000555953291964
+      },
+      "query_offset": [
+        0,
+        0
+      ],
+      "analytic": true,
+      "mismatch": 0,
+      "mean_candidates": 1.2491861979166667
+    }
+  ],
+  "total_pixels": 737280,
+  "total_mismatches": 0
+}

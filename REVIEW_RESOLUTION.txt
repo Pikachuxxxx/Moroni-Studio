@@ -1,0 +1,33 @@
+MORONI revision: resolved review findings and remaining scope
+==========================================================
+
+1. Search correctness: replaced cached fixed-radius selection with adaptive finite-lattice rings and valid unvisited-strip lower bounds. Candidate bounds use enclosing polygon radii plus the LUT error allowance. Query grids and weights may change on each call. All-zero ties exhaust safely and select the lowest index.
+
+2. Distance claims: replaced the invalid clamped-LUT extension with analytical polygon distance outside the box. The paper derives a bilinear interpolation error bound, acknowledges switching discontinuity and additional roundoff, and does not claim that interpolation remains 1-Lipschitz. Label stability requires a 2*beta*epsilon lead; it is not a universal 1e-5 claim.
+
+3. Shape evidence: included Voronoi with the same clipping, no-phase ablation and a specified warp. Eight seeds and target-based eligibility include disappeared cells as zero. Per-seed measurements, coverage, standard deviations and paired differences are saved. Clipping is explicitly acknowledged as the dominant contribution; phase often reduces target IoU.
+
+4. Shared implementation: Python and JavaScript use shared PRNG draw order, sites, polygons, sample convention and palette. GPU geometry is uploaded from JavaScript; a complete finite candidate scan replaces the fixed hashed neighborhood. HUD labels are read from the GPU field. Shader precision differences are measured and disclosed. The browser hull uses every sampled pixel corner, removing a subsampling error that could produce solidity above one; even-sized medians match the CPU convention. Rectangle and mixed-shape regression checks cover these cases.
+
+5. Browser presentation: shared unlit Paper Colors is the default; shaded mode and edge-shadow controls were removed. Aspect ratio is preserved. PNG exports exclude lighting and wireframe overlays. SVG is labelled input polygons. CPU fallback colors are also unlit; its raster normal approximation is documented.
+
+6. Performance: CPU timings are repeated and interleaved with construction costs stated. GPU draw timings use disjoint timer queries, with raw samples and hardware/browser identity. Host submission time is no longer called GPU time. No incomparable CPU/GPU ratio or universal FPS is claimed.
+
+7. Theory and scope: corrected the site phase convention, removed phase-LUT and fixed-ring promises, clarified finite support and worst-case work, and removed raster-to-continuous topology arguments. Polygon validity is enforced by circular angular order. Square Voronoi cells and richer procedural models are acknowledged. Related work includes PPTBF and the corrected procedural-noise survey.
+
+8. Artifact consistency: the original title, two-column class, section order, eight tables, eight figure environments, six algorithms, bibliography and five appendix sections are retained. Table data and figure contents are refreshed from the corrected code, using the original table and panel layouts. Unsupported claims and obsolete numerical results were removed. Tables are inline in paper.tex; no generated TeX folder is needed. Old benchmark entry points route to the new pipeline. The material-map figure is captured from actual WebGL outputs. README citation is unpublished, not a claim of JCGT publication.
+
+Validation recorded in this revision:
+- Python regression suite and Node tests pass.
+- 120 CPU search cases / 737,280 pixels: zero accelerated/full differences.
+- Nine browser cases / 55,296 pixels: zero GPU pruned/full differences.
+- One GPU/CPU difference in a strong-phase case, with an approximately 2.61e-6 winning-energy lead; no claim of universal bitwise agreement.
+- Browser table contains 40 measured draws per condition; hardware and disjoint count are in JSON.
+
+Remaining limits and concrete ways to extend the work:
+- Cross-vendor/mobile coverage is limited. Run the provided browser harness on additional GPUs/browsers and publish all failures, timings and device identities before broad compatibility claims.
+- No perceptual or artist study is claimed. If needed for a future contribution, recruit representative users, compare matched alternatives and predefine quality/control tasks and analysis.
+- Filtering is limited to four preview samples and ordinary downstream map filtering. A future study should compare temporal stability and aliasing under minification with a stated reference.
+- The field is finite and not seamless. Periodic generation would require wrapped geometry, search and distance evaluation plus seam tests; it is not a hidden feature of this version.
+- Physical realism and physical fracture are out of scope. A claim about those would require a physical model and measured validation, not additional wording.
+- JCGT acceptance remains an editorial/reviewer decision. This revision fixes identifiable correctness and evidence gaps; it cannot establish novelty sufficiency or guarantee acceptance. The present scope is more naturally a practical techniques submission than a broad comparative research claim.

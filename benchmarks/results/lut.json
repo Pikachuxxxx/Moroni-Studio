@@ -1,0 +1,35 @@
+{
+  "query_seed": 42,
+  "queries_per_polygon": 4000,
+  "polygons": 96,
+  "field_resolution": [
+    320,
+    200
+  ],
+  "rows": [
+    {
+      "size": 36,
+      "mae": 8.858260917284128e-05,
+      "maximum": 0.02095962852839034,
+      "bound": 0.033258007030554176,
+      "mismatch_pixels": 15,
+      "mismatch_pct": 0.0234375
+    },
+    {
+      "size": 72,
+      "mae": 2.152131952006469e-05,
+      "maximum": 0.00846999203850829,
+      "bound": 0.016394792198160507,
+      "mismatch_pixels": 4,
+      "mismatch_pct": 0.00625
+    },
+    {
+      "size": 144,
+      "mae": 5.277890216942581e-06,
+      "maximum": 0.004103401715035593,
+      "bound": 0.008140071650834938,
+      "mismatch_pixels": 1,
+      "mismatch_pct": 0.0015625
+    }
+  ]
+}
