@@ -23,7 +23,8 @@ import numpy as np
 
 __all__ = [
     "CellField", "make_cells", "grid", "prune_radius",
-    "render_reference", "render_pruned", "render_binned",
+    "render_reference", "render_pruned", "render_binned", "BinnedRenderer",
+    "apply_margin", "shape_fidelity",
     "soften", "voronoi_kdtree", "boundary_density", "colorize",
 ]
 
@@ -119,44 +120,91 @@ def grid(w, h, bbox):
 
 
 # ------------------------------------------------------------------ energy bits
-def _sample_lut(dx, dy, lut, r):
+def _sample_lut(dx, dy, lut, r, bilinear=True):
+    """
+    Sample signed polygon distance from precomputed LUT with bilinear interpolation.
+    For queries beyond the LUT bounding box [-r, r], adds the Euclidean distance
+    from the bounding box boundary (preserving 1-Lipschitz continuity).
+    """
     n = lut.shape[-1]
-    ix = np.clip(((dx + r) * (n - 1) / (2 * r)).astype(np.int32), 0, n - 1)
-    iy = np.clip(((dy + r) * (n - 1) / (2 * r)).astype(np.int32), 0, n - 1)
-    return lut[iy, ix] if lut.ndim == 2 else np.take_along_axis(
-        lut.reshape(lut.shape[0], -1), (iy * n + ix)[..., None], -1)[..., 0]
+    gx = (dx + r) * (n - 1) / (2.0 * r)
+    gy = (dy + r) * (n - 1) / (2.0 * r)
+
+    if not bilinear:
+        ix = np.clip(np.round(gx).astype(np.int32), 0, n - 1)
+        iy = np.clip(np.round(gy).astype(np.int32), 0, n - 1)
+        base = lut[iy, ix] if lut.ndim == 2 else np.take_along_axis(
+            lut.reshape(lut.shape[0], -1), (iy * n + ix)[..., None], -1)[..., 0]
+    else:
+        gx_c = np.clip(gx, 0.0, n - 1 - 1e-6)
+        gy_c = np.clip(gy, 0.0, n - 1 - 1e-6)
+        x0 = gx_c.astype(np.int32)
+        y0 = gy_c.astype(np.int32)
+        x1 = np.minimum(x0 + 1, n - 1)
+        y1 = np.minimum(y0 + 1, n - 1)
+        fx = gx_c - x0
+        fy = gy_c - y0
+
+        if lut.ndim == 2:
+            v00, v10 = lut[y0, x0], lut[y0, x1]
+            v01, v11 = lut[y1, x0], lut[y1, x1]
+        else:
+            flat = lut.reshape(lut.shape[0], -1)
+            v00 = np.take_along_axis(flat, (y0 * n + x0)[..., None], -1)[..., 0]
+            v10 = np.take_along_axis(flat, (y0 * n + x1)[..., None], -1)[..., 0]
+            v01 = np.take_along_axis(flat, (y1 * n + x0)[..., None], -1)[..., 0]
+            v11 = np.take_along_axis(flat, (y1 * n + x1)[..., None], -1)[..., 0]
+
+        base = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
+
+    out_dx = np.maximum(0.0, np.abs(dx) - r)
+    out_dy = np.maximum(0.0, np.abs(dy) - r)
+    return (base + np.hypot(out_dx, out_dy)).astype(F32)
 
 
 def _phase_atan2(dx, dy, dc, kappa, lam):
-    """Reference phase term: 1 - cos(kappa*theta + lam*d)."""
-    return 1.0 - np.cos(kappa * np.arctan2(dy, dx) + lam * dc)
+    """Reference phase term: 1 - cos(kappa*theta + lam*d). At center dc < 1e-6, phase is 0."""
+    theta = np.arctan2(dy, dx)
+    val = 1.0 - np.cos(kappa * theta + lam * dc)
+    return np.where(dc < 1e-6, 0.0, val).astype(F32)
 
 
 def _phase_algebraic(dx, dy, dc, lam):
     """
-    Exact phase for kappa == 2, with no atan2.
-
-        cos(2t + lam*d) = cos2t*cos(lam*d) - sin2t*sin(lam*d)
-        cos2t = (dx^2 - dy^2)/d^2 ,  sin2t = 2*dx*dy/d^2
+    Exact algebraic phase evaluation for kappa == 2 without atan2.
+    For dc -> 0, the directional limit is regularized to 0 to match _phase_atan2 at the center.
     """
-    d2 = dx * dx + dy * dy + F32(1e-12)
+    d2 = dx * dx + dy * dy
+    safe_d2 = np.maximum(d2, F32(1e-12))
     cl, sl = np.cos(lam * dc), np.sin(lam * dc)
-    return 1.0 - ((dx * dx - dy * dy) * cl - 2.0 * dx * dy * sl) / d2
+    cos_val = ((dx * dx - dy * dy) * cl - 2.0 * dx * dy * sl) / safe_d2
+    cos_val = np.where(dc < 1e-6, 1.0, cos_val)
+    return (1.0 - cos_val).astype(F32)
 
 
 def prune_radius(field: CellField, alpha, beta, gamma) -> float:
     """
-    Radius delta such that any cell with d_c > d_min + delta provably cannot win.
+    Admissible candidate pruning bound based on an incumbent energy.
 
-    The signed field lies in [-I_c, R_c] and (1 - cos) in [0, 2], so
-        alpha*d_c - beta*I_max  <=  E_c
-        E_c                     <=  alpha*d_c + beta*R_max + 2*gamma
-    Taking c* as the nearest centre gives the upper bound
-    U = alpha*d_min + beta*R_max + 2*gamma on the winning energy. A cell can only
-    beat it if alpha*d_c - beta*I_max <= U, i.e.
-        d_c <= d_min + (beta*(R_max + I_max) + 2*gamma)/alpha.
+    For any cell c with polygon interior depth I_c = -min(s_c) >= 0 (where I_max = max(I_c)):
+        E_c(x) >= alpha * d_c - beta * I_max
+
+    Given an incumbent candidate c* (e.g., nearest lattice center with distance d_min),
+    the winning energy is bounded above by:
+        U(x) = E_{c*}(x) <= alpha * d_min + beta * s_{c*}(x) + 2 * gamma
+
+    Since s_{c*}(x) <= d_min (as s_{c*}(0) <= 0 and s is 1-Lipschitz), we have:
+        U(x) <= (alpha + beta) * d_min + 2 * gamma
+
+    Therefore, any cell c whose lower bound exceeds U(x) cannot win:
+        alpha * d_c - beta * I_max > U(x)
+        d_c > d_min + (beta * (I_max + d_min) + 2 * gamma) / alpha
+
+    For a global delta = d_c - d_min across all pixels where d_min <= max_lattice_dist:
     """
-    span = float(field.lut_radius.max() + field.lut_depth.max())
+    I_max = float(field.lut_depth.max())
+    d_max_cell = field.spacing * np.sqrt(2.0) / 2.0
+    span = float(I_max + d_max_cell)
     return float((beta * span + 2.0 * gamma) / max(alpha, 1e-9))
 
 
@@ -166,26 +214,43 @@ BACKGROUND = -1
 
 def apply_margin(labels, field, xv, yv, margin):
     """
-    Turn a space-filling partition into cells + mortar.
-
-    argmin over every cell always tiles the plane, and a space-filling tiling is
-    generically hexagonal no matter what the cells' polygons look like -- which is
-    why vertex count alone cannot control cell shape. Releasing pixels whose signed
-    distance to the winning polygon exceeds `margin` lets each cell keep its own
-    silhouette, and makes `margin` a mortar/grout width control.
-
+    Turn a space-filling partition into cells + mortar by releasing pixels
+    whose signed distance to the winning polygon exceeds `margin`.
     margin=None keeps the full partition.
     """
     if margin is None:
         return labels
-    ln = field.luts.shape[-1]
-    dx = xv - field.centers[labels, 0]
-    dy = yv - field.centers[labels, 1]
-    rad = field.lut_radius[labels]
-    ix = np.clip(((dx + rad) * (ln - 1) / (2 * rad)).astype(np.int32), 0, ln - 1)
-    iy = np.clip(((dy + rad) * (ln - 1) / (2 * rad)).astype(np.int32), 0, ln - 1)
+    valid = labels >= 0
     out = labels.copy()
-    out[field.luts[labels, iy, ix] > margin] = BACKGROUND
+    if not valid.any():
+        return out
+
+    ln = field.luts.shape[-1]
+    dx = xv[valid] - field.centers[labels[valid], 0]
+    dy = yv[valid] - field.centers[labels[valid], 1]
+    rad = field.lut_radius[labels[valid]]
+    lbl = labels[valid]
+
+    # Bilinear sampling
+    gx = np.clip((dx + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
+    gy = np.clip((dy + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
+    x0, y0 = gx.astype(np.int32), gy.astype(np.int32)
+    x1, y1 = np.minimum(x0 + 1, ln - 1), np.minimum(y0 + 1, ln - 1)
+    fx, fy = gx - x0, gy - y0
+
+    v00 = field.luts[lbl, y0, x0]
+    v10 = field.luts[lbl, y0, x1]
+    v01 = field.luts[lbl, y1, x0]
+    v11 = field.luts[lbl, y1, x1]
+    sd = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
+
+    out_dx = np.maximum(0.0, np.abs(dx) - rad)
+    out_dy = np.maximum(0.0, np.abs(dy) - rad)
+    sd += np.hypot(out_dx, out_dy)
+
+    mask = np.zeros(labels.shape, bool)
+    mask[valid] = (sd > margin)
+    out[mask] = BACKGROUND
     return out
 
 
@@ -276,6 +341,9 @@ class BinnedRenderer:
             self.ring += 1
         self.bound_energy = float(u)
         self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+        self.lam = lam
 
         self.index = np.full((field.rows, field.cols), -1, np.int32)
         for i, (r, c) in enumerate(field.lattice):
@@ -288,7 +356,6 @@ class BinnedRenderer:
         t = np.linspace(0.0, self._dmax, phase_lut, dtype=F32)
         self._cos = np.cos(lam * t).astype(F32)
         self._sin = np.sin(lam * t).astype(F32)
-        self.lam = lam
         self._bin_cache: dict[tuple[int, int], np.ndarray] = {}
 
     def _bins(self, xv, yv):
@@ -306,7 +373,11 @@ class BinnedRenderer:
         return [(dr, dc) for dr in range(-r, r + 1) for dc in range(-r, r + 1)
                 if max(abs(dr), abs(dc)) == r]
 
-    def render(self, xv, yv, alpha=0.58, beta=0.32, gamma=0.10, return_stats=False):
+    def render(self, xv, yv, alpha=None, beta=None, gamma=None, lam=None, return_stats=False):
+        alpha = self.alpha if alpha is None else alpha
+        beta = self.beta if beta is None else beta
+        gamma = self.gamma if gamma is None else gamma
+        lam = self.lam if lam is None else lam
         rc = self._bins(xv, yv)
         cen, luts, lr = self.f.centers, self.f.luts, self.f.lut_radius
         ln = luts.shape[-1]
@@ -333,19 +404,31 @@ class BinnedRenderer:
                 d2 = dx * dx + dy * dy
                 dc = np.sqrt(d2, dtype=F32)
                 rad = lr[cid]
-                ix = np.clip(((dx + rad) * (ln - 1) / (2 * rad)).astype(np.int32), 0, ln - 1)
-                iy = np.clip(((dy + rad) * (ln - 1) / (2 * rad)).astype(np.int32), 0, ln - 1)
-                de = luts[cid, iy, ix]
-                pi = np.clip((dc * pscale).astype(np.int32), 0, self._pn - 1)
-                ph = 1.0 - ((dx * dx - dy * dy) * self._cos[pi]
-                            - 2.0 * dx * dy * self._sin[pi]) / (d2 + F32(1e-12))
+                gx = np.clip((dx + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
+                gy = np.clip((dy + rad) * (ln - 1) / (2.0 * rad), 0.0, ln - 1 - 1e-6)
+                x0, y0 = gx.astype(np.int32), gy.astype(np.int32)
+                x1, y1 = np.minimum(x0 + 1, ln - 1), np.minimum(y0 + 1, ln - 1)
+                fx, fy = gx - x0, gy - y0
+                v00 = luts[cid, y0, x0]
+                v10 = luts[cid, y0, x1]
+                v01 = luts[cid, y1, x0]
+                v11 = luts[cid, y1, x1]
+                de = (1.0 - fx) * (1.0 - fy) * v00 + fx * (1.0 - fy) * v10 + (1.0 - fx) * fy * v01 + fx * fy * v11
+                out_dx = np.maximum(0.0, np.abs(dx) - rad)
+                out_dy = np.maximum(0.0, np.abs(dy) - rad)
+                de += np.hypot(out_dx, out_dy)
+
+                cl, sl = np.cos(lam * dc), np.sin(lam * dc)
+                cos_term = ((dx * dx - dy * dy) * cl - 2.0 * dx * dy * sl) / (d2 + F32(1e-12))
+                cos_term = np.where(dc < 1e-6, 1.0, cos_term)
+                ph = 1.0 - cos_term
                 v = alpha * dc + beta * de + gamma * ph
                 m = v < bv
                 bv[m] = v[m]; bi[m] = cid[m]
 
             best_v.ravel()[idx] = bv
             best_i.ravel()[idx] = bi
-            # a cell outside ring r has energy >= alpha*((r+1)-0.63)*s
+            # a cell outside ring r has energy >= alpha * D_min - beta * I_max
             floor = (alpha * ((r + 1) - 0.63) * self.f.spacing
                      - beta * float(self.f.lut_depth.max()))
             still = bv > floor
@@ -360,13 +443,17 @@ class BinnedRenderer:
         return best_i
 
 
-def shape_fidelity(labels, field, xv, yv):
+def shape_fidelity(labels, field, xv, yv, min_pixels=50):
     """
-    Mean IoU between each rendered cell and its own polygon.
+    Mean IoU between each rendered cell and its target generating polygon.
 
-    1.0 means every cell reproduces its generating polygon exactly, so vertex
-    count is a real shape control rather than a hidden parameter. Voronoi scores
-    whatever its bisector partition happens to give, and cannot be steered.
+    Parameters:
+        labels: 2D array of cell assignments (-1 for background / grout).
+        field: CellField containing generating polygons.
+        xv, yv: Pixel coordinate grids.
+        min_pixels: Minimum pixel threshold. In finite crops, edge cells truncated
+                    by image boundaries can be excluded (min_pixels > 0, default 50)
+                    or penalized with IoU = 0.0 (min_pixels = 0).
     """
     from matplotlib.path import Path as MplPath
     h, w = labels.shape
@@ -374,12 +461,17 @@ def shape_fidelity(labels, field, xv, yv):
     out = []
     for i, poly in enumerate(field.polys):
         cell = (labels == i)
-        if cell.sum() < 50:
+        cnt = cell.sum()
+        if cnt < min_pixels:
+            if min_pixels == 0:
+                out.append(0.0)
             continue
         tgt = MplPath(poly).contains_points(pts).reshape(h, w)
         u = np.logical_or(cell, tgt).sum()
-        if u:
-            out.append(np.logical_and(cell, tgt).sum() / u)
+        if u > 0:
+            out.append(float(np.logical_and(cell, tgt).sum() / u))
+        elif min_pixels == 0:
+            out.append(0.0)
     return float(np.mean(out)) if out else 0.0
 
 

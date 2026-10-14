@@ -1,8 +1,8 @@
 """
 Rigorous evaluation of LUT accuracy and comparative baselines for MORONI paper.
 Quantifies:
-1. Signed Distance LUT error vs Analytical Exact Polygon Distance
-2. Comparative Baseline Analysis (Voronoi L2, L1, Linf, Power Diagram, Apollonius, Worley F2-F1, MORONI)
+1. Signed Distance LUT error vs Analytical Exact Polygon Distance (MAE, RMSE, L_inf, and Label Mismatch %)
+2. Comparative Baseline Analysis (Voronoi L2 unmasked, Voronoi L2 + Clipping, L1, Linf, Power Diagram, Apollonius, MORONI variants)
 Outputs JSON and metrics for the revised paper and appendix.
 """
 import sys
@@ -51,7 +51,7 @@ def eval_lut_accuracy(lut_sizes=[36, 72, 144]):
     rng = np.random.default_rng(42)
     results = {}
     
-    # Generate 50 varied test polygons
+    # 1. Distance field error over 50 varied test polygons
     test_polys = []
     for _ in range(50):
         n = int(rng.integers(3, 9))
@@ -61,8 +61,25 @@ def eval_lut_accuracy(lut_sizes=[36, 72, 144]):
         p = M._root_polygon(ctr, n, r, jitter, rng)
         test_polys.append((p, r))
     
-    # Grid of test points (1000 x 1000 = 1,000,000 points per polygon)
     query_dim = 500
+    w, h = 900, 560
+    f_default = M.make_cells(seed=22, lut_size=72)
+    xv, yv = M.grid(w, h, f_default.bbox)
+    alpha, beta, gamma = 0.58, 0.32, 0.10
+
+    # Compute exact analytical labels on default field once
+    print("  Computing exact analytical ground truth field (900x560)...")
+    best_v_exact = np.full(xv.shape, np.inf, np.float32)
+    best_i_exact = np.zeros(xv.shape, np.int32)
+    for i, (poly, ctr) in enumerate(zip(f_default.polys, f_default.centers)):
+        dx, dy = xv - ctr[0], yv - ctr[1]
+        dc = np.hypot(dx, dy)
+        s_exact = exact_analytical_sdf(xv, yv, poly)
+        ph = M._phase_atan2(dx, dy, dc, 2.0, 1.0)
+        v = alpha * dc + beta * s_exact + gamma * ph
+        m = v < best_v_exact
+        best_v_exact[m], best_i_exact[m] = v[m], i
+
     for lsize in lut_sizes:
         maes, rmses, l_infs = [], [], []
         for poly, rad in test_polys:
@@ -72,29 +89,36 @@ def eval_lut_accuracy(lut_sizes=[36, 72, 144]):
             lx, ly = np.meshgrid(ax_lut, ax_lut)
             lut = exact_analytical_sdf(lx, ly, poly)
             
-            # Query at high-density random grid
+            # Query at high-density grid
             qx = np.linspace(-rr, rr, query_dim, dtype=np.float32)
             qy = np.linspace(-rr, rr, query_dim, dtype=np.float32)
             qxv, qyv = np.meshgrid(qx, qy)
             
             exact = exact_analytical_sdf(qxv, qyv, poly)
-            sampled = M._sample_lut(qxv, qyv, lut, rr)
+            sampled = M._sample_lut(qxv, qyv, lut, rr, bilinear=True)
             
             diff = np.abs(sampled - exact)
             maes.append(float(np.mean(diff)))
             rmses.append(float(np.sqrt(np.mean(diff ** 2))))
             l_infs.append(float(np.max(diff)))
             
+        # Compute label mismatch on field
+        f_eval = M.make_cells(seed=22, lut_size=lsize)
+        lbl_lut = M.render_reference(f_eval, xv, yv, alpha=alpha, beta=beta, gamma=gamma)
+        label_mismatch = float(np.mean(lbl_lut != best_i_exact) * 100.0)
+
         results[f"lut_{lsize}"] = {
             "lut_size": lsize,
             "mean_mae": float(np.mean(maes)),
             "mean_rmse": float(np.mean(rmses)),
             "mean_l_inf": float(np.mean(l_infs)),
             "max_l_inf": float(np.max(l_infs)),
+            "label_mismatch_pct": label_mismatch,
         }
         print(f"  LUT {lsize}x{lsize}: MAE={results[f'lut_{lsize}']['mean_mae']:.5f}, "
               f"RMSE={results[f'lut_{lsize}']['mean_rmse']:.5f}, "
-              f"L_inf_max={results[f'lut_{lsize}']['max_l_inf']:.5f}")
+              f"L_inf_max={results[f'lut_{lsize}']['max_l_inf']:.5f}, "
+              f"Label Error={label_mismatch:.4f}%")
         
     return results
 
@@ -106,64 +130,78 @@ def eval_baselines():
     pts = np.column_stack([xv.ravel(), yv.ravel()])
     c = f.centers
     
-    # 1. Standard Voronoi (L2 Euclidean)
+    # 1. Standard Voronoi (L2 Euclidean, unmasked)
     tree = cKDTree(c)
     lbl_vor_l2 = tree.query(pts, k=1, workers=-1)[1].reshape(h, w).astype(np.int32)
     
-    # 2. Manhattan Voronoi (L1)
+    # 2. Standard Voronoi + Polygon Clipping (margin=0.0)
+    lbl_vor_l2_clip = M.apply_margin(lbl_vor_l2, f, xv, yv, margin=0.0)
+
+    # 3. Manhattan Voronoi (L1)
     lbl_vor_l1 = tree.query(pts, k=1, p=1, workers=-1)[1].reshape(h, w).astype(np.int32)
     
-    # 3. Chebyshev Voronoi (Linf)
+    # 4. Chebyshev Voronoi (Linf)
     lbl_vor_linf = tree.query(pts, k=1, p=np.inf, workers=-1)[1].reshape(h, w).astype(np.int32)
     
-    # 4. Power Diagram (Laguerre): argmin ||x - c_i||^2 - w_i
-    # Give random positive weights representing cell radius variance
+    # 5. Power Diagram (Laguerre): argmin ||x - c_i||^2 - w_i
     rng = np.random.default_rng(22)
     weights = (rng.uniform(0.3, 0.8, size=len(c)) ** 2).astype(np.float32)
     dcs_sq = np.sum((pts[:, None, :] - c[None, :, :]) ** 2, axis=2) # (P, N)
     lbl_power = np.argmin(dcs_sq - weights[None, :], axis=1).reshape(h, w).astype(np.int32)
     
-    # 5. Additively Weighted Voronoi (Apollonius): argmin ||x - c_i|| - w_i
+    # 6. Additively Weighted Voronoi (Apollonius): argmin ||x - c_i|| - w_i
     dcs = np.sqrt(dcs_sq)
     lbl_apollonius = np.argmin(dcs - (np.sqrt(weights))[None, :], axis=1).reshape(h, w).astype(np.int32)
     
-    # 6. Worley F2 - F1
-    # Worley assigns value F2 - F1, but cell partition is defined by F1 (Voronoi)
-    # 7. MORONI gamma=0.0 (no fracture, polygon SDF only)
-    lbl_moroni_g0 = M.BinnedRenderer(f, gamma=0.0).render(xv, yv, gamma=0.0)
+    # 7. MORONI gamma=0.0 (no fracture, polygon SDF only) + Clipping
+    lbl_moroni_g0 = M.apply_margin(M.render_reference(f, xv, yv, alpha=0.58, beta=0.32, gamma=0.0), f, xv, yv, margin=0.0)
     
-    # 8. MORONI default gamma=0.10
-    lbl_moroni_def = M.BinnedRenderer(f, gamma=0.10).render(xv, yv, gamma=0.10)
+    # 8. MORONI default gamma=0.10 + Clipping
+    lbl_moroni_def = M.apply_margin(M.render_reference(f, xv, yv, alpha=0.58, beta=0.32, gamma=0.10), f, xv, yv, margin=0.0)
     
-    # 9. MORONI fractured gamma=0.20
-    lbl_moroni_f20 = M.BinnedRenderer(f, gamma=0.20).render(xv, yv, gamma=0.20)
+    # 9. MORONI fractured gamma=0.20 + Clipping
+    lbl_moroni_f20 = M.apply_margin(M.render_reference(f, xv, yv, alpha=0.58, beta=0.32, gamma=0.20), f, xv, yv, margin=0.0)
     
-    # 10. MORONI shattered gamma=0.35
-    lbl_moroni_f35 = M.BinnedRenderer(f, gamma=0.35).render(xv, yv, gamma=0.35)
+    # 10. MORONI shattered gamma=0.35 + Clipping
+    lbl_moroni_f35 = M.apply_margin(M.render_reference(f, xv, yv, alpha=0.58, beta=0.32, gamma=0.35), f, xv, yv, margin=0.0)
     
     generators = {
-        "Voronoi (L2 Euclidean)": lbl_vor_l2,
+        "Voronoi (L2 Euclidean, unmasked)": lbl_vor_l2,
+        "Voronoi (L2) + Clipping (m=0)": lbl_vor_l2_clip,
         "Voronoi (L1 Manhattan)": lbl_vor_l1,
         "Voronoi (L_inf Chebyshev)": lbl_vor_linf,
         "Power (Laguerre) Diagram": lbl_power,
         "Apollonius Diagram": lbl_apollonius,
-        "MORONI (gamma=0.00)": lbl_moroni_g0,
+        "MORONI (gamma=0.00, polygon only)": lbl_moroni_g0,
         "MORONI (gamma=0.10, default)": lbl_moroni_def,
-        "MORONI (gamma=0.20)": lbl_moroni_f20,
-        "MORONI (gamma=0.35)": lbl_moroni_f35,
+        "MORONI (gamma=0.20, fractured)": lbl_moroni_f20,
+        "MORONI (gamma=0.35, shattered)": lbl_moroni_f35,
     }
     
     def geom(lbl):
         comps, sol = [], []
-        for i in range(int(lbl.max()) + 1):
+        max_id = int(lbl.max())
+        for i in range(max_id + 1):
             m = (lbl == i)
             if m.sum() < 50:
                 continue
-            comps.append(ndimage.label(m)[1])
+            # Filter components >= 4 pixels to ignore single-pixel discretization artifacts
+            labeled_arr, num_feats = ndimage.label(m)
+            counts = np.bincount(labeled_arr.ravel())[1:]
+            valid_feats = int(np.sum(counts >= 4))
+            comps.append(max(1, valid_feats))
+            
             ys, xs = np.nonzero(m)
             try:
-                ch = ConvexHull(np.column_stack([xs, ys]).astype(float))
-                sol.append(m.sum() / ch.volume)
+                # 4 corners per pixel to correctly calculate discrete raster convex hull area
+                corners = np.vstack([
+                    np.column_stack([xs - 0.5, ys - 0.5]),
+                    np.column_stack([xs + 0.5, ys - 0.5]),
+                    np.column_stack([xs + 0.5, ys + 0.5]),
+                    np.column_stack([xs - 0.5, ys + 0.5]),
+                ])
+                ch = ConvexHull(corners)
+                sol.append(float(np.clip(m.sum() / ch.volume, 0.0, 1.0)))
             except Exception:
                 pass
         c_arr, s_arr = np.array(comps), np.array(sol)
@@ -176,12 +214,12 @@ def eval_baselines():
         }
     
     res = {}
-    print(f"\n{'Generator':30s} | {'Solidity':8s} | {'Non-Convex':10s} | {'Disconn %':9s}")
-    print("-" * 65)
+    print(f"\n{'Generator':34s} | {'Solidity':8s} | {'Non-Convex':10s} | {'Disconn %':9s}")
+    print("-" * 70)
     for name, g_lbl in generators.items():
         stats = geom(g_lbl)
         res[name] = stats
-        print(f"{name:30s} | {stats['median_solidity']:8.3f} | {stats['nonconvex_pct']:9.1f}% | {stats['disconnected_pct']:8.1f}%")
+        print(f"{name:34s} | {stats['median_solidity']:8.3f} | {stats['nonconvex_pct']:9.1f}% | {stats['disconnected_pct']:8.1f}%")
         
     return res
 

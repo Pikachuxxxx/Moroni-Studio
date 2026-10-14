@@ -125,9 +125,19 @@ def cmd_control():
         for i in range(int(lbl.max()) + 1):
             m = lbl == i
             if m.sum() < 50: continue
-            comps.append(ndimage.label(m)[1])
+            labeled_arr, num_feats = ndimage.label(m)
+            counts = np.bincount(labeled_arr.ravel())[1:]
+            valid_feats = int(np.sum(counts >= 4))
+            comps.append(max(1, valid_feats))
             ys, xs = np.nonzero(m)
-            try: sol.append(m.sum() / ConvexHull(np.column_stack([xs, ys]).astype(float)).volume)
+            try:
+                corners = np.vstack([
+                    np.column_stack([xs - 0.5, ys - 0.5]),
+                    np.column_stack([xs + 0.5, ys - 0.5]),
+                    np.column_stack([xs + 0.5, ys + 0.5]),
+                    np.column_stack([xs - 0.5, ys + 0.5]),
+                ])
+                sol.append(float(np.clip(m.sum() / ConvexHull(corners).volume, 0.0, 1.0)))
             except Exception: pass
         c, s = np.array(comps), np.array(sol)
         return {"disconnected_pct": float(100 * np.mean(c > 1)),

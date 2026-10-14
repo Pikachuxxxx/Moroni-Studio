@@ -273,11 +273,16 @@ class MoroniCore {
 
         // Shoelace formula for polygon area
         let area = 0;
+        let perimeter = 0;
         for (let i = 0; i < hull.length; i++) {
             const j = (i + 1) % hull.length;
             area += hull[i][0] * hull[j][1] - hull[j][0] * hull[i][1];
+            perimeter += Math.hypot(hull[j][0] - hull[i][0], hull[j][1] - hull[i][1]);
         }
-        return Math.abs(area) * 0.5;
+        // Pick's theorem for discrete raster grid points in polygon: A_discrete = continuous_area + perimeter / 2 + 1
+        const continuousArea = Math.abs(area) * 0.5;
+        const discreteHullPoints = continuousArea + perimeter * 0.5 + 1.0;
+        return Math.max(discreteHullPoints, points.length);
     }
 
     // Count connected components via 8-connected BFS

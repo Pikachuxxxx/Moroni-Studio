@@ -563,43 +563,73 @@ class MoroniApp {
         if (exportStatus) exportStatus.textContent = `Baking ${mapType.toUpperCase()} map (${width}×${height})...`;
 
         setTimeout(() => {
-            const field = MoroniCore.buildCellField({
-                rows: this.state.rows,
-                cols: this.state.cols,
-                spacing: this.state.spacing,
-                radius: this.state.radius,
-                jitter: this.state.jitter,
-                sides: this.state.sides,
-                seed: this.state.seed
-            });
+            if (this.useWebGL && this.glRenderer && this.glRenderer.gl) {
+                // Render directly using GPU WebGL fragment shader
+                const origW = this.canvas.width;
+                const origH = this.canvas.height;
+                this.canvas.width = width;
+                this.canvas.height = height;
+                this.glRenderer.gl.viewport(0, 0, width, height);
 
-            const renderRes = MoroniCore.renderCPU(field, width, height, {
-                generator: 'moroni',
-                alpha: this.state.alpha,
-                beta: this.state.beta,
-                gamma: this.state.gamma,
-                kappa: this.state.kappa,
-                lam: this.state.lambda,
-                margin: this.state.margin,
-                useMargin: this.state.useMargin
-            });
+                const modeMap = { diffuse: 0, normal: 1, height: 2, roughness: 3 };
+                const exportMode = modeMap[mapType] !== undefined ? modeMap[mapType] : 0;
+                const exportState = { ...this.state, mode: exportMode };
 
-            const pbr = MoroniCore.generatePBRMaps(renderRes, this.state.radius);
-            const imgData = pbr[mapType];
+                this.glRenderer.render(exportState, 0.0);
 
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.putImageData(imgData, 0, 0);
+                const dataUrl = this.canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `moroni_${mapType}_${width}x${height}.png`;
+                link.href = dataUrl;
+                link.click();
 
-            const link = document.createElement('a');
-            link.download = `moroni_${mapType}_${width}x${height}.png`;
-            link.href = tempCanvas.toDataURL('image/png');
-            link.click();
+                // Restore display canvas resolution
+                this.canvas.width = origW;
+                this.canvas.height = origH;
+                this.glRenderer.gl.viewport(0, 0, origW, origH);
+                this.forceRenderFrame();
 
-            if (exportStatus) exportStatus.textContent = `Successfully baked ${mapType.toUpperCase()}!`;
-            setTimeout(() => { if (exportStatus) exportStatus.textContent = ""; }, 3000);
+                if (exportStatus) exportStatus.textContent = `Successfully exported GPU ${mapType.toUpperCase()}!`;
+                setTimeout(() => { if (exportStatus) exportStatus.textContent = ""; }, 3000);
+            } else {
+                const field = MoroniCore.buildCellField({
+                    rows: this.state.rows,
+                    cols: this.state.cols,
+                    spacing: this.state.spacing,
+                    radius: this.state.radius,
+                    jitter: this.state.jitter,
+                    sides: this.state.sides,
+                    seed: this.state.seed
+                });
+
+                const renderRes = MoroniCore.renderCPU(field, width, height, {
+                    generator: 'moroni',
+                    alpha: this.state.alpha,
+                    beta: this.state.beta,
+                    gamma: this.state.gamma,
+                    kappa: this.state.kappa,
+                    lam: this.state.lambda,
+                    margin: this.state.margin,
+                    useMargin: this.state.useMargin
+                });
+
+                const pbr = MoroniCore.generatePBRMaps(renderRes, this.state.radius);
+                const imgData = pbr[mapType];
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.putImageData(imgData, 0, 0);
+
+                const link = document.createElement('a');
+                link.download = `moroni_${mapType}_${width}x${height}.png`;
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+
+                if (exportStatus) exportStatus.textContent = `Successfully baked ${mapType.toUpperCase()}!`;
+                setTimeout(() => { if (exportStatus) exportStatus.textContent = ""; }, 3000);
+            }
         }, 30);
     }
 

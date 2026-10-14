@@ -1,16 +1,16 @@
-# MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields
+# MORONI: Polygon-Guided Cellular Textures via Roots-of-Unity Polygons and Phase-Modulated Boundaries
 
 A real-time, art-directable replacement for Voronoi tessellation designed for procedural texturing, game engines, and physical rendering pipelines.
 
 - **Interactive WebGL2 Studio:** [https://pikachuxxxx.github.io/Moroni-Studio/](https://pikachuxxxx.github.io/Moroni-Studio/)
-- **Manuscript (PDF):** [paper/paper.pdf](paper/paper.pdf) (*Under review for ACM Transactions on Graphics*)
+- **Manuscript (PDF):** [paper/paper.pdf](paper/paper.pdf) (*Prepared for Journal of Computer Graphics Techniques (JCGT)*)
 
 ---
 
 ## Overview
 
-Classical Voronoi diagrams use Euclidean perpendicular bisectors between point sites. While fast, they suffer from two fundamental limitations in procedural texturing:
-1. **No Shape Steering:** Space-filling planar partitions with 3-valent vertices average 6 sides by Euler's formula ($v - e + f = \chi$). Standard Voronoi cannot produce clean triangular or quadrilateral tiles.
+Classical Voronoi diagrams use Euclidean perpendicular bisectors between point sites. While fast, they offer limited art direction:
+1. **No Target Shape Steering:** Point sites cannot directly prescribe target polygon silhouettes (triangles, quads).
 2. **Rigid Boundaries:** Boundaries are straight line segments, making it impossible to produce organic crack propagation, brittle fractures, or controlled mortar/grout channels.
 
 MORONI replaces point sites with parameterized root-of-unity polygons evaluated through a three-term energy function:
@@ -20,8 +20,8 @@ $$E_c(\mathbf{x}) = \alpha \cdot d_c(\mathbf{x}) + \beta \cdot s_c(\mathbf{x}) +
 where:
 - $d_c(\mathbf{x})$ is the Euclidean distance to the cell center (governs overall cell size).
 - $s_c(\mathbf{x})$ is the **signed** distance to the cell polygon (negative inside, pulling boundaries toward the target shape).
-- The cosine wave modulates boundary curvature based on polar angle $\theta_c$ and radial distance, creating controllable crack and fracture patterns.
-- An independent coverage margin $m$ releases non-tiling space into mortar ($s_{c^\star}(\mathbf{x}) > m$), breaking the Euler hexagonal lock and boosting polygon shape IoU from 0.49 to 0.89.
+- The cosine wave modulates boundary curvature based on polar angle $\theta_c$ and radial distance, creating controllable crack patterns.
+- An independent coverage margin $m$ releases non-tiling space into mortar ($s_{c^\star}(\mathbf{x}) > m$), freeing cells from the strict space-filling constraint and boosting polygon shape IoU from 0.49 to 0.89.
 
 ![MORONI Studio](paper/figures/app_screenshot.png)
 
@@ -171,12 +171,10 @@ pdflatex -interaction=nonstopmode paper.tex
 
 ```bibtex
 @article{phani2026moroni,
-  title   = {MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields},
-  author  = {Phani, Srikar},
-  journal = {ACM Transactions on Graphics (TOG)},
-  volume  = {45},
-  number  = {4},
-  pages   = {1--12},
+  title   = {MORONI: Polygon-Guided Cellular Textures via Roots-of-Unity Polygons and Phase-Modulated Boundaries},
+  author  = {Phani},
+  journal = {Journal of Computer Graphics Techniques (JCGT)},
   year    = {2026}
 }
 ```
+
