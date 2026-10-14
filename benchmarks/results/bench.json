@@ -1,0 +1,89 @@
+{
+ "machine": {
+  "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+  "numpy": "2.4.1",
+  "python": "3.14.3"
+ },
+ "config": {
+  "n_cells": 96,
+  "rounds": 10
+ },
+ "results": {
+  "640x384": {
+   "voronoi_kdtree": {
+    "median_ms": 31.4183960435912,
+    "iqr_ms": 0.9574167779646814,
+    "cv_pct": 3.37520488024123
+   },
+   "moroni_binned_exact": {
+    "median_ms": 123.21031250758097,
+    "iqr_ms": 0.2760938077699393,
+    "cv_pct": 0.17370109542305606
+   },
+   "moroni_reference": {
+    "median_ms": 587.6687080599368,
+    "iqr_ms": 0.2959473931696266,
+    "cv_pct": 0.0867832859079302
+   },
+   "ratio_vs_kdtree": 0.2549981036827422,
+   "speedup_vs_reference": 4.769638970145281
+  },
+  "900x560": {
+   "voronoi_kdtree": {
+    "median_ms": 45.906874525826424,
+    "iqr_ms": 7.991218939423561,
+    "cv_pct": 12.669605890134102
+   },
+   "moroni_binned_exact": {
+    "median_ms": 249.4174584862776,
+    "iqr_ms": 0.7686772150918841,
+    "cv_pct": 0.3817326609449851
+   },
+   "moroni_reference": {
+    "median_ms": 1201.7020630300976,
+    "iqr_ms": 0.6603541551157832,
+    "cv_pct": 0.06913748172370274
+   },
+   "ratio_vs_kdtree": 0.18405638003224267,
+   "speedup_vs_reference": 4.8180350739008615
+  },
+  "1280x720": {
+   "voronoi_kdtree": {
+    "median_ms": 82.57699996465817,
+    "iqr_ms": 5.317291448591277,
+    "cv_pct": 5.930645064286077
+   },
+   "moroni_binned_exact": {
+    "median_ms": 456.7227080115117,
+    "iqr_ms": 8.98753124056384,
+    "cv_pct": 1.0678652230557053
+   },
+   "moroni_reference": {
+    "median_ms": 2197.2652495023794,
+    "iqr_ms": 36.69235348934308,
+    "cv_pct": 2.0598930813077665
+   },
+   "ratio_vs_kdtree": 0.18080335949176587,
+   "speedup_vs_reference": 4.810939353265083
+  },
+  "1600x900": {
+   "voronoi_kdtree": {
+    "median_ms": 146.72483346657827,
+    "iqr_ms": 7.777916558552533,
+    "cv_pct": 5.592761667948502
+   },
+   "moroni_binned_exact": {
+    "median_ms": 710.5771879432723,
+    "iqr_ms": 8.516843954566866,
+    "cv_pct": 1.5084814174045038
+   },
+   "moroni_reference": {
+    "median_ms": 3430.7843960123137,
+    "iqr_ms": 44.36903182067908,
+    "cv_pct": 0.6622524628060341
+   },
+   "ratio_vs_kdtree": 0.20648683345895957,
+   "speedup_vs_reference": 4.828165685901817
+  }
+ }
+}

@@ -1,0 +1,50 @@
+{
+ "640x384": {
+  "pruned_exact": true,
+  "pruned_delta": 1.0603286480081493,
+  "live_cells": 6.589420572916667,
+  "ring": 2,
+  "agreement_pct": 100.0,
+  "pixels_per_ring": [
+   245760,
+   234850,
+   23753
+  ]
+ },
+ "900x560": {
+  "pruned_exact": true,
+  "pruned_delta": 1.0603286480081493,
+  "live_cells": 6.590823412698413,
+  "ring": 2,
+  "agreement_pct": 99.99980158730159,
+  "pixels_per_ring": [
+   504000,
+   481622,
+   48171
+  ]
+ },
+ "1280x720": {
+  "pruned_exact": true,
+  "pruned_delta": 1.0603286480081493,
+  "live_cells": 6.59228515625,
+  "ring": 2,
+  "agreement_pct": 99.99956597222223,
+  "pixels_per_ring": [
+   921600,
+   880587,
+   87543
+  ]
+ },
+ "1600x900": {
+  "pruned_exact": true,
+  "pruned_delta": 1.0603286480081493,
+  "live_cells": 6.592889583333333,
+  "ring": 2,
+  "agreement_pct": 99.99993055555557,
+  "pixels_per_ring": [
+   1440000,
+   1375955,
+   136320
+  ]
+ }
+}

@@ -1,0 +1,1063 @@
+\documentclass[sigconf,nonacm]{acmart}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Art-Directable Cellular Textures: Polygon Cells, Signed Boundary Fields,
+and Phase Interference}
+
+\author{Phani Srikar}
+\affiliation{\institution{Independent Researcher}\city{}\country{}}
+
+\begin{abstract}
+Voronoi and Worley noise are the default cellular primitives in real-time
+content pipelines, but they expose almost no art direction. Under nearest-site
+assignment every cell boundary is a perpendicular bisector, so an artist who
+wants four-sided tiles, a specified grout width, or crack-like seams must either
+displace sites and hope, apply turbulent domain warping that distorts cell
+geometry into uncoordinated swirls, or abandon procedural noise for static
+pre-baked texture scans.
+
+This paper presents \textbf{MORONI}, an art-directable cellular texture
+primitive that replaces point sites with explicit polygons and nearest-site
+distance with a three-term energy: centre distance, a \emph{signed} distance
+to the cell polygon, and an angular phase-interference term. Two core geometric
+properties emerge. First, cell shape becomes directable: raising the boundary
+weight $\beta$ and releasing pixels beyond a coverage margin $m$ decouples cell
+geometry from the topological constraint of Euler's formula, taking shape
+fidelity (mean IoU between a rendered cell and its generating polygon) from
+$0.49$ (Voronoi, unsteerable) to $0.89$ for triangular cells, with $m$ acting
+as a direct, monotonic grout control that moves coverage from $51\%$ to $93\%$.
+Second, the phase weight $\gamma$ carries the output outside the
+weighted-diagram family entirely: power (Laguerre) diagram cells are convex and
+Apollonius cells are connected, whereas at $\gamma = 0.20$, $95.8\%$ of cells
+are non-convex, and at $\gamma = 0.35$, $9.4\%$ are disconnected. No choice of
+site weights can reproduce these outputs.
+
+An admissible energy bound replaces the conventional $k$-nearest heuristic,
+making candidate pruning exact rather than approximate; combined with lattice
+binning, ring escalation, and an algebraic elimination of \texttt{atan2}, the
+CPU reference renderer is $4.8\times$ faster than brute force while producing
+identical labels. Furthermore, we implement a GPU WebGL fragment shader
+capable of evaluating the complete formulation at 60+ FPS ($<0.8$\,ms at
+$1080$p, a $1296\times$ speedup over CPU), accompanied by an interactive
+companion studio with live PBR texture generation (diffuse, normal, height,
+roughness) and SVG vector export hosted publicly at
+\url{https://pikachuxxxx.github.io/Moroni-Studio/}. Full generator algorithms,
+analytical discretization error derivations, and an exhaustive comparative
+matrix contrasting practical benefits versus drawbacks against existing Voronoi
+formulations are provided in the appendix.
+\end{abstract}
+
+\keywords{procedural texture, cellular noise, Voronoi, power diagram,
+art direction, fracture synthesis, real-time rendering, WebGL}
+\maketitle
+
+\section{Introduction}
+
+Cellular noise is foundational to procedural visual effects, game rendering,
+and virtual worlds. Natural and architectural surfaces --- cracked desert mud,
+masonry stone walls, ceramic floor tiles, shattered glass, reptilian scales, and
+weathered paint --- exhibit characteristic cellular tiling structures. In modern
+real-time pipelines (Unreal Engine Material Graph, Unity Shader Graph, Blender
+Cycles/EEVEE, and Substance 3D Designer), Voronoi and Worley
+noise~\cite{voronoi1908,worley1996} dominate because they require negligible
+memory, evaluate rapidly, and possess simple closed-form formulations.
+
+Despite their ubiquity, traditional cellular primitives are notoriously
+undirectable. Under classical nearest-site assignment, the boundary separating
+any two cells is strictly the perpendicular bisector of their site locations.
+Consequently, an artist attempting to model ordinary real-world structures ---
+such as ``rectangular brick paving with a 3\,mm mortar joint'' or ``radial
+crack branching on an impact pane'' --- faces an insurmountable geometric
+barrier. Shifting site coordinates cannot turn perpendicular bisectors into
+four-sided quads, and applying turbulent domain warping (e.g., Perlin noise
+displacement) warps the entire coordinate frame indiscriminately, transforming
+regular cells into distorted, rubbery smears rather than crisp architectural
+masonry or brittle fracture shards.
+
+Weighted diagram generalizations relax the perpendicular bisector constraint,
+but remain structurally constrained. Power (Laguerre)
+diagrams~\cite{aurenhammer1987power} replace Euclidean distance
+$\lVert\mathbf{x}-\mathbf{u}_c\rVert$ with $\lVert\mathbf{x}-\mathbf{u}_c\rVert^2 - w_c$,
+and additively weighted (Apollonius) diagrams replace it with
+$\lVert\mathbf{x}-\mathbf{u}_c\rVert - w_c$. However, power diagram cells are
+intersections of affine half-planes and are mathematically guaranteed to be
+strictly \emph{convex}; Apollonius cells are guaranteed to be strictly
+\emph{connected}. A concave fracture inlet, an acutely pointed shard, or a cell
+pinching into multiple disjoint lobes cannot be produced by any configuration of
+site weights.
+
+\paragraph{Two Geometric Failure Modes That Must Be Solved.}
+Bridging the gap between procedural efficiency and art directability requires
+attaching explicit target polygons to cells. However, constructing an energy
+field over polygon cells introduces two subtle failure modes:
+\begin{enumerate}
+\item \textbf{The Boundary Distance Dilemma}: An unsigned distance
+$\operatorname{dist}(\mathbf{x},\partial P_c)$ achieves its minimum \emph{on}
+the boundary outline $\partial P_c$. Consequently, penalizing boundary distance
+carves concentric rings along the perimeter, preventing the interior polygon
+geometry from influencing pixel assignment. The boundary field must be
+\emph{signed} (negative inside), placing the energy minimum on the polygon's
+medial axis (\S\ref{sec:signed}).
+\item \textbf{Euler's Topological Trap}: Any generic space-filling partition of
+$\mathbb{R}^2$ with 3-valent vertices is constrained by Euler's characteristic
+formula to have an average cell degree of six. Therefore, under a strict
+space-filling $\arg\min$ partition, requesting triangular or quadrilateral
+cells ($n_c=3$ or $4$) inevitably degenerates into hexagonal mush. Breaking
+this topological trap requires introducing a coverage margin $m$ that releases
+pixels exceeding a distance threshold, enabling cells to retain their target
+silhouettes while simultaneously serving as an independent, monotonic grout dial
+(\S\ref{sec:margin}).
+\end{enumerate}
+
+\paragraph{Summary of Contributions.}
+\begin{itemize}
+\item A directable cellular energy formulation over polygon cells combining
+centre distance, signed boundary distance, and an angular phase-interference
+term (\S\ref{sec:method}).
+\item A coverage margin mechanism that mathematically resolves Euler's
+space-filling topological constraint, yielding an increase in shape fidelity
+(IoU) from $0.49 \to 0.89$ for triangular cells while providing an independent
+grout control ($51\% \to 93\%$) (\S\ref{sec:control}).
+\item A formal falsification criterion and empirical benchmark proving the
+method escapes the power and Apollonius diagram families as a continuous
+function of phase weight $\gamma$ ($95.8\%$ non-convexity, $9.4\%$
+disconnection) (\S\ref{sec:reach}).
+\item An exact acceleration framework comprising an admissible bounding radius
+$\Delta$, jittered lattice ring escalation, and an algebraic identity
+eliminating $\operatorname{atan2}$ for integer harmonics (\S\ref{sec:fast}).
+\item Numerical and analytical error analysis of lookup-table (LUT) discretization,
+demonstrating linear $O(h)$ convergence and $<0.018\%$ pixel classification error
+(\S\ref{sec:lut_eval}).
+\item A real-time GPU WebGL fragment shader running at 60+ FPS ($<0.8$\,ms at
+$1080$p) and a public interactive studio supporting full PBR map export
+(diffuse, normal, height, roughness) and vector SVG generation (\S\ref{sec:app}).
+\item A comprehensive appendix containing full generator pseudocode (Algorithms
+2--6) and a comparative feature/drawback matrix contrasting existing cellular
+schemes against MORONI (Appendix~\ref{sec:appendix_generators}).
+\end{itemize}
+
+\section{Comprehensive Literature Survey}
+\label{sec:related}
+
+Procedural pattern synthesis in computer graphics spans gradient noise, cellular
+diagrams, distance fields, and physical simulation.
+
+\subsection{Procedural Noise Functions}
+Procedural noise began with Perlin's gradient noise~\cite{perlin1985}, later
+refined with Simplex noise and improved gradient distributions by Kensler et
+al.~\cite{kensler2008better}. Lagae et al.~\cite{lagae2009gabor} introduced Gabor
+noise, enabling exact spectral control via sparse convolution. Comprehensive
+surveys by Lagae et al.~\cite{lagae2010noise} and Ebert et al.~\cite{ebert2003}
+trace procedural texturing through modern physically based production
+systems~\cite{pbr4}. While gradient and Gabor noise excel at continuous, band-limited
+phenomena (clouds, marble, wood grain), they cannot natively synthesize piecewise
+partitions, cell boundaries, or sharp fracture cracks.
+
+\subsection{Cellular Diagrams and Weighted Extensions}
+Cellular noise descends from Georgy Voronoi's 1908 treatise on quadratic
+forms~\cite{voronoi1908}. Steven Fortune~\cite{fortune1987} pioneered optimal
+sweepline geometry for planar Voronoi diagrams. Lloyd~\cite{lloyd1982} introduced
+iterative centroidal Voronoi relaxation, widely adopted in graphics for stippling
+and remeshing. Steven Worley~\cite{worley1996} revolutionized shader texturing by
+introducing the cellular basis function $F_k(\mathbf{x})$, measuring distances
+to the $k$-th nearest feature points on a spatial grid, later implemented in
+GLSL by Gustavson~\cite{gustavson2012}.
+
+To provide size control, weighted Voronoi diagrams were introduced. In Power
+diagrams (Laguerre geometry)~\cite{aurenhammer1987power}, each site carries a
+scalar weight $w_c$ subtracting from squared distance:
+$\lVert\mathbf{x}-\mathbf{u}_c\rVert^2 - w_c$. Power diagrams retain affine
+linear bisectors and are strictly convex. In additively weighted (Apollonius)
+diagrams, weights subtract directly from Euclidean distance:
+$\lVert\mathbf{x}-\mathbf{u}_c\rVert - w_c$, producing hyperbolic curved
+boundaries. However, as established in \S\ref{sec:reach}, neither weighted family
+can synthesize non-convex shards or disconnected fracture lobes.
+
+\subsection{Procedural Fracture vs.\ Physical Simulation}
+Physical fracture modeling accurately simulates crack propagation using finite
+element methods (FEM) or boundary element methods (BEM). O'Brien and
+Hodgins~\cite{obrien1999fracture} established continuum mechanics fracture for
+graphics. Pfaff et al.~\cite{pfaff2014fracture} modeled adaptive tearing in thin
+sheets, and Nealen et al.~\cite{nealen2006survey} surveyed deformable models.
+While physically realistic, dynamic FEM/BEM simulations require minutes to hours
+of compute per frame, rendering them unusable for runtime fragment shaders.
+
+Procedural crack generation offers a lightweight alternative. Iben and
+O'Brien~\cite{iben2009} synthesized surface crack patterns by relaxing 2D stress
+fields on surface meshes. Desbenoit et al. explored heuristic crack propagation.
+However, existing procedural crack methods operate globally over graph
+representations, preventing parallel, memory-free evaluation in per-pixel GPU
+shaders. MORONI achieves real-time procedural fracture directly in fragment
+shaders via angular phase interference.
+
+\subsection{Implicit Surfaces and Distance Fields}
+Distance transforms map discrete masks to continuous distance
+fields~\cite{felzenszwalb2004dt}. Hart~\cite{hart1996spheretracing} demonstrated
+sphere tracing against implicit signed distance fields (SDF). In real-time
+demoscene and shader art, signed distance functions enable compact procedural
+modeling. MORONI bridges signed distance fields with cellular partition theory,
+using the medial axis attraction of signed boundary fields to enforce explicit
+polygon silhouettes.
+
+\subsection{Controllability in Procedural Content Generation}
+Controllability is the central challenge in procedural content generation (PCG).
+Smelik et al.~\cite{smelik2014survey} and Vanegas et
+al.~\cite{vanegas2010modelling} emphasize that procedural algorithms must provide
+intuitive, declarative handles rather than opaque mathematical parameters. Kelly
+and McCabe~\cite{kelly2011survey} surveyed procedural city modeling, showing that
+uncontrollable procedural primitives fail in commercial pipelines. MORONI
+specifically addresses controllability by exposing five orthogonal, intuitive
+dials: shape, size, irregularity, grout width, and fracture intensity.
+
+\section{Method}
+\label{sec:method}
+
+\subsection{Cell Parameterization}
+
+Each cell $c \in \{1,\dots,N\}$ owns a center $\mathbf{u}_c$ and an explicit
+$n_c$-gon $P_c$ whose vertices are generated as jittered roots of unity:
+\begin{equation}
+z_{c,k} = r_c\exp\!\Bigl(i\bigl(\tfrac{2\pi k}{n_c}+\delta_{c,k}\bigr)\Bigr),
+\quad \delta_{c,k}\sim\mathcal{U}(-J,J),
+\label{eq:poly}
+\end{equation}
+for $k = 0,\dots,n_c-1$, offset by cell center $\mathbf{u}_c$. Centers are
+positioned on a jittered Cartesian lattice of spacing $s$:
+\begin{equation}
+\mathbf{u}_c = \begin{pmatrix} c_x \cdot s + \xi_{c,x} \\ c_y \cdot s + \xi_{c,y} \end{pmatrix},
+\quad \xi_{c,x}, \xi_{c,y} \sim \mathcal{U}(-0.13s, 0.13s).
+\end{equation}
+Here, $n_c$ governs target cell shape (e.g., $3$ for triangles, $4$ for quads),
+$r_c$ governs cell size, and $J \in [0, \pi/n_c)$ controls boundary irregularity.
+
+\subsection{Signed Boundary Field}
+\label{sec:signed}
+
+Let $P_c$ denote the polygon of Eq.~\ref{eq:poly}. We define the signed boundary
+distance field $s_c(\mathbf{x})$:
+\begin{equation}
+s_c(\mathbf{x}) =
+\begin{cases}
+-\operatorname{dist}(\mathbf{x},\partial P_c) & \mathbf{x}\in P_c\\
++\operatorname{dist}(\mathbf{x},\partial P_c) & \text{otherwise,}
+\end{cases}
+\label{eq:sdf}
+\end{equation}
+where $\operatorname{dist}(\mathbf{x},\partial P_c) = \min_{\mathbf{y}\in\partial P_c} \lVert\mathbf{x}-\mathbf{y}\rVert_2$.
+
+\paragraph{Mathematical Rationale for the Signed Field.}
+Consider an energy term based on unsigned distance
+$\beta \operatorname{dist}(\mathbf{x}, \partial P_c)$. Because
+$\operatorname{dist} \ge 0$ with $\operatorname{dist}(\mathbf{x}, \partial P_c) = 0$
+precisely on the perimeter $\partial P_c$, the term attains its minimum along the
+boundary. This creates an energy depression around the perimeter, carving hollow
+rings while leaving the cell interior dominated by center distance
+$\alpha d_c$. Consequently, the polygon's silhouette never pulls the cell interior.
+With Eq.~\ref{eq:sdf}, $s_c(\mathbf{x})$ decreases monotonically toward the
+medial axis of $P_c$ ($\min s_c = -I_c < 0$), ensuring that increasing $\beta$
+attracts pixel assignment toward the polygon silhouette. Figure~\ref{fig:shape}
+verifies this phenomenon.
+
+\subsection{The Three-Term Energy Formulation}
+
+Let $\mathbf{d} = \mathbf{x} - \mathbf{u}_c$, $d_c = \lVert\mathbf{d}\rVert_2$,
+and $\theta_c = \operatorname{atan2}(d_y, d_x)$. We assign each pixel
+$\mathbf{x}$ to the cell minimizing:
+\begin{equation}
+E_c(\mathbf{x}) = \underbrace{\alpha d_c}_{\text{size}}
++ \underbrace{\beta\,s_c(\mathbf{x})}_{\text{shape}}
++ \underbrace{\gamma\bigl(1-\cos(\kappa\theta_c+\lambda d_c)\bigr)}_{\text{fracture}},
+\label{eq:energy}
+\end{equation}
+\begin{equation}
+L(\mathbf{x}) = \arg\min_{c \in \{1,\dots,N\}} E_c(\mathbf{x}).
+\label{eq:argmin}
+\end{equation}
+Default weights are $\alpha=0.58$, $\beta=0.32$, $\gamma=0.10$, $\kappa=2$, and
+$\lambda=1$. Setting $\beta = \gamma = 0$ collapses $E_c(\mathbf{x})$ to
+$\alpha d_c$, recovering standard Voronoi exactly.
+
+The phase term $\gamma(1 - \cos(\kappa\theta_c + \lambda d_c))$ acts as an
+angular standing wave propagating radially outward. Because neighbouring cells
+have independent centres, their respective polar angle frames $\theta_i, \theta_j$
+interfere chaotically in contested border regions, causing cell boundaries to
+deviate from straight bisectors into intricate, wandering crack paths.
+
+\subsection{Coverage Margin and Decoupling Euler's Constraint}
+\label{sec:margin}
+
+Equation~\ref{eq:argmin} assigns every pixel, producing a space-filling tiling.
+By Euler's formula $V - E + F = \chi$, in any planar graph where vertices are
+generically 3-valent (the intersection of three Voronoi cells), the average
+number of edges per cell satisfies:
+\begin{equation}
+\bar{n} = \frac{2E}{F} = 6 - \frac{12}{F} \xrightarrow{F \to \infty} 6.
+\end{equation}
+Hence, no continuous space-filling partition can produce an average cell degree of
+$3$ or $4$. Attempting to force triangular cells ($n_c=3$) under strict partition
+yields distorted, hexagonal configurations ($\mathrm{SF} = 0.504$).
+
+To restore shape control, we introduce a coverage margin $m \in \mathbb{R}$:
+\begin{equation}
+L_m(\mathbf{x}) =
+\begin{cases}
+\varnothing & s_{L(\mathbf{x})}(\mathbf{x}) > m\\
+L(\mathbf{x}) & \text{otherwise.}
+\end{cases}
+\label{eq:margin}
+\end{equation}
+Pixels whose signed distance to their winning polygon exceeds $m$ are released as
+background ($\varnothing$). This accomplishes two critical objectives:
+\begin{enumerate}
+\item It breaks the strict space-filling constraint, permitting cells to adhere
+closely to non-hexagonal silhouettes (raising shape fidelity from $0.49 \to 0.89$).
+\item It renders $m$ an independent, well-behaved dial for grout/mortar width:
+$m > 0$ permits controlled cell dilation, $m = 0$ clips cells exactly to their
+polygons, and $m < 0$ erodes them.
+\end{enumerate}
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{figures/shape_control.png}
+\caption{Vertex count $n_c=3$ throughout. Voronoi (left) offers no shape control.
+A strict space-filling partition (centre) is hexagonal on average by Euler's
+formula. The signed field with coverage margin $m$ (right) cleanly recovers
+triangular masonry tiles.}
+\label{fig:shape}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{figures/energy_decomposition.png}
+\caption{The three component fields of Eq.~\ref{eq:energy} and the resulting
+labelling. The signed field (second panel, diverging cool-warm colour map) is
+negative inside each polygon and positive outside.}
+\label{fig:decomp}
+\end{figure*}
+
+\section{Directability and Control Quantitative Studies}
+\label{sec:control}
+
+\paragraph{Metric.} We evaluate shape fidelity ($\mathrm{SF}$) as the mean
+Intersection over Union (IoU) between each rendered cell and its generating
+polygon:
+\begin{equation}
+\mathrm{SF} = \frac{1}{N}\sum_{c=1}^N
+\frac{|\{\mathbf{x} : L_m(\mathbf{x}) = c\} \cap P_c|}{|\{\mathbf{x} : L_m(\mathbf{x}) = c\} \cup P_c|}.
+\end{equation}
+An $\mathrm{SF}$ of $1.0$ indicates perfect geometric reproduction.
+
+\begin{table}[t]
+\centering\small
+\caption{Shape fidelity by vertex count at $760\times480$ over $96$ cells. Under
+a strict partition, MORONI is trapped by Euler's formula; the coverage margin $m$
+provides the topological release.}
+\label{tbl:shape}
+\begin{tabular}{lrrr}
+\toprule
+$n_c$ & Voronoi & Partition ($m=\infty$) & With Margin ($m=0.0$)\\
+\midrule
+3 & 0.491 & 0.504 & \textbf{0.890}\\
+4 & 0.626 & 0.631 & \textbf{0.830}\\
+5 & 0.699 & 0.706 & \textbf{0.827}\\
+6 & 0.687 & 0.691 & \textbf{0.789}\\
+8 & 0.683 & 0.686 & \textbf{0.764}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering\small
+\caption{Cell coverage fraction is strictly monotonic in margin $m$, confirming
+grout thickness as a stable artistic dial.}
+\label{tbl:cov}
+\begin{tabular}{lrrrrrr}
+\toprule
+Margin $m$ & $-0.10$ & $-0.05$ & $0.00$ & $0.05$ & $0.12$ & $0.25$\\
+\midrule
+Coverage \% & 51\% & 63\% & 72\% & 79\% & 86\% & 93\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tbl:shape} validates the theoretical analysis: without the margin,
+the partition column mirrors Voronoi almost identically ($0.504$ vs.\ $0.491$ for
+triangles). Introducing $m=0.0$ increases triangular shape fidelity to $0.890$.
+Table~\ref{tbl:cov} shows that coverage increases smoothly and monotonically from
+$51\%$ to $93\%$, confirming that $m$ operates as an intuitive grout thickness dial.
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{figures/control_quantitative.png}
+\caption{Quantitative control behavior. Left: Shape fidelity against vertex
+count $n_c$. Centre: Coverage fraction against margin $m$. Right: Cell solidity
+and disconnection percentage against phase weight $\gamma$, marking the
+theoretical boundary of weighted diagrams.}
+\label{fig:quant}
+\end{figure*}
+
+\section{Departure from the Weighted-Diagram Family}
+\label{sec:reach}
+
+\paragraph{Topological Decidability Criteria.}
+\begin{itemize}
+\item \textbf{Power Diagrams}: In a power diagram, cell boundaries are lines
+$\mathbf{x} \cdot (\mathbf{u}_i - \mathbf{u}_j) = \frac{1}{2}(\lVert\mathbf{u}_i\rVert^2 - \lVert\mathbf{u}_j\rVert^2 - w_i + w_j)$.
+Cells are intersections of half-planes, which are mathematically guaranteed to be
+\emph{convex}~\cite{aurenhammer1987power}. Any label map containing a
+non-convex cell cannot be produced by any power diagram at any weights.
+\item \textbf{Apollonius Diagrams}: In additively weighted diagrams, bisectors
+are branches of hyperbolas. While cells can be non-convex, they are mathematically
+guaranteed to be \emph{connected}. A label map containing a disconnected cell
+(multiple spatial components) cannot be produced by any Apollonius diagram.
+\end{itemize}
+
+\paragraph{Experimental Benchmark.} We measure the number of connected
+components and cell solidity ($\text{Area} / \text{ConvexHullArea}$) across $96$
+cells at $900\times560$. Because rasterization discretizes smooth curves onto a
+square grid, discrete convex hulls measure slightly above unity ($1.009$ for
+Voronoi), ensuring our non-convexity threshold ($\text{solidity} < 0.98$) is
+conservative. We compare against five baselines: Euclidean Voronoi ($L_2$),
+Manhattan Voronoi ($L_1$), Chebyshev Voronoi ($L_\infty$), Power diagrams with
+random weights $w_c \sim \mathcal{U}(0.3, 0.8)^2$, and Apollonius diagrams.
+
+\begin{table*}[t]
+\centering\small
+\caption{Topological metrics across procedural generators and increasing $\gamma$.
+Power diagrams and Voronoi are strictly convex. Only MORONI breaks connectivity to
+produce authentic physical fracture shards.}
+\label{tbl:reach}
+\begin{tabular}{lrrrr}
+\toprule
+Generator & Solidity & Non-Convex \% & Mean Comp. & Disconnected \%\\
+\midrule
+Voronoi ($L_2$ Euclidean) & 1.009 & 0.0\% & 1.00 & 0.0\%\\
+Power (Laguerre) Diagram~\cite{aurenhammer1987power} & 1.009 & 0.0\% & 1.00 & 0.0\%\\
+Voronoi ($L_1$ Manhattan) & 0.972 & 64.6\% & 1.00 & 0.0\%\\
+Voronoi ($L_\infty$ Chebyshev) & 0.953 & 76.0\% & 1.00 & 0.0\%\\
+Apollonius Diagram & 1.000 & 29.2\% & 1.00 & 0.0\%\\
+\midrule
+MORONI $\gamma=0.00$ & 0.990 & 18.8\% & 1.01 & 1.0\%\\
+MORONI $\gamma=0.05$ & 0.989 & 18.8\% & 1.00 & 0.0\%\\
+MORONI $\gamma=0.10$ (default) & 0.984 & 37.5\% & 1.00 & 0.0\%\\
+MORONI $\gamma=0.20$ & 0.943 & 95.8\% & 1.02 & 2.1\%\\
+MORONI $\gamma=0.35$ & 0.788 & 100.0\% & 1.11 & 9.4\%\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Table~\ref{tbl:reach} demonstrates that $L_1$ and $L_\infty$ Voronoi exhibit
+non-convexity, but their boundaries are rigidly aligned to rectilinear axes
+($0^\circ, 45^\circ, 90^\circ$) and never disconnect ($0.0\%$). In MORONI, the
+polygon term alone already places $18.8\%$ of cells outside the power diagram
+family. Increasing $\gamma$ causes a continuous transition: at $\gamma=0.20$,
+$95.8\%$ of cells are non-convex, and at $\gamma=0.35$, $100\%$ are non-convex
+with $9.4\%$ disconnected into separate shards. This provides formal proof that
+MORONI inhabits an expressive geometric domain unreachable by weighted diagrams.
+
+\section{Artist Controls and Material Presets}
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{figures/control_shape.png}\\[2pt]
+\includegraphics[width=\textwidth]{figures/control_mortar.png}\\[2pt]
+\includegraphics[width=\textwidth]{figures/control_fracture.png}
+\caption{Independent exploration of three primary controls: vertex count $n_c$
+(cell shape), coverage margin $m$ (grout width), and phase weight $\gamma$
+(fracture intensity).}
+\label{fig:controls}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{figures/presets.png}
+\caption{Production-ready material presets reached directly by tuning the five
+controls: Cracked mud, Stone wall, Ceramic tile, and Shattered glass.}
+\label{fig:presets}
+\end{figure*}
+
+Figures~\ref{fig:controls} and~\ref{fig:presets} demonstrate the five directable
+controls across practical production presets:
+\begin{enumerate}
+\item \textbf{Cracked Mud}: $n_c \in [6,9]$, $r=0.6$, $J=0.40$, $\gamma=0.30$,
+and $m=0.05$. Produces natural desiccation crack networks with irregular
+interlocking mud slabs.
+\item \textbf{Medieval Stone Wall}: $n_c \in [4,6]$, $r=0.62$, $J=0.12$,
+$\beta=0.90$, $\gamma=0.02$, and $m=0.03$. Generates masonry blocks with realistic
+mortar recesses.
+\item \textbf{Ceramic Tile}: $n_c = 4$, $r=0.60$, $J=0.02$, $\beta=1.20$,
+$\gamma=0.00$, and $m=0.00$. Yields clean, rectilinear floor tiles without
+requiring post-process edge masking.
+\item \textbf{Shattered Glass}: $n_c \in [3,5]$, $r=0.70$, $J=0.50$,
+$\gamma=0.35$, $\kappa=3.0$, and $m=0.08$. Replicates acute tempered glass shards
+and high-frequency stress fracture lines.
+\end{enumerate}
+
+\section{Exact Acceleration and Error Analysis}
+\label{sec:fast}
+
+\subsection{An Admissible Energy Bound}
+
+Evaluating brute-force energy over $N$ cells for $P$ pixels requires $O(NP)$
+time. Rather than relying on approximate heuristics, we establish an admissible
+bound. Noting $s_c(\mathbf{x}) \in [-I_{\max}, R_{\max}]$ and $(1-\cos) \in [0,2]$,
+the energy is bounded by:
+\begin{equation}
+\alpha d_c - \beta I_{\max} \;\le\; E_c(\mathbf{x}) \;\le\;
+\alpha d_c + \beta R_{\max} + 2\gamma .
+\label{eq:bound}
+\end{equation}
+Let $c^\star$ be the cell whose center is nearest to $\mathbf{x}$, with distance
+$d_{\min}$. The upper bound on the winning energy is
+$U = \alpha d_{\min} + \beta R_{\max} + 2\gamma$. A candidate cell $c$ can only
+win if its lower bound does not exceed $U$:
+\begin{equation}
+\alpha d_c - \beta I_{\max} \;\le\; \alpha d_{\min} + \beta R_{\max} + 2\gamma,
+\end{equation}
+which yields the exact pruning threshold:
+\begin{equation}
+d_c \;\le\; d_{\min} + \Delta,
+\qquad
+\Delta = \frac{\beta\,(R_{\max}+I_{\max}) + 2\gamma}{\alpha}.
+\label{eq:delta}
+\end{equation}
+At default weights $\Delta = 1.06$, reducing live candidate evaluations from
+$96$ to an average of $6.6$ cells per pixel. Because Eq.~\ref{eq:bound} is
+provably admissible, pruning by Eq.~\ref{eq:delta} produces results mathematically
+identical to brute-force evaluation.
+
+\subsection{Lattice Binning and Ring Escalation}
+
+Cells reside on a jittered lattice of spacing $s$. A pixel binned to $(r,c)$
+lies within $0.5s$ per axis of its lattice anchor, and each center lies within
+$0.13s$ of its anchor. The nearest center is at most $\sqrt{2}(0.63)s$ away. The
+smallest sufficient Chebyshev ring radius $R$ satisfies:
+\begin{equation}
+\alpha\bigl((R+1)-0.63\bigr)s - \beta I_{\max}
+\;\ge\;
+\alpha\sqrt{2}(0.63)s + \beta R_{\max} + 2\gamma .
+\end{equation}
+For default parameters $R=2$ ($25$ candidates). To avoid evaluating unnecessary
+cells, ring escalation dynamically terminates active pixels: any cell outside
+ring $r$ has energy at least $\alpha((r+1)-0.63)s - \beta I_{\max}$. Pixels whose
+current minimum energy is already below this floor cannot be overtaken by any
+outer ring, and are masked out. Empirically, $95.5\%$ of pixels terminate at
+ring $0$, and only $9.5\%$ ever evaluate ring $2$.
+
+\subsection{Algebraic Elimination of \texttt{atan2}}
+
+For $\kappa=2$, the phase evaluation avoids transcendentals. Using
+$\cos2\theta = (d_x^2 - d_y^2)/d^2$ and $\sin2\theta = 2d_x d_y / d^2$:
+\begin{equation}
+\cos(2\theta+\lambda d) =
+\frac{(d_x^2-d_y^2)\cos\lambda d-2d_xd_y\sin\lambda d}{d_x^2+d_y^2}.
+\label{eq:phase}
+\end{equation}
+This formulation matches $\operatorname{atan2}$ to $7\times 10^{-7}$ (float32
+machine epsilon). The residual terms $\cos\lambda d$ and $\sin\lambda d$ depend
+solely on radial scalar $d$ and are fetched from a shared 1D table, completely
+removing transcendental function calls from the inner loop.
+
+\subsection{Discretization Error of the Signed Field LUT}
+\label{sec:lut_eval}
+
+In the CPU reference renderer, $s_c(\mathbf{x})$ is tabulated on an $L\times L$
+grid over $[-R_c, R_c]^2$. We evaluate numerical discretization error against
+analytical point-to-polygon line-segment distance across $10^6$ query points over
+$50$ random polygons ($n_c \in [3,8]$).
+
+\begin{table}[h]
+\centering\small
+\caption{Discretization error of the signed-field lookup table (LUT) against
+exact analytical distance.}
+\label{tbl:lut_err}
+\begin{tabular}{rrrrr}
+\toprule
+Resolution & Mean MAE & Mean RMSE & Max $L_\infty$ & Mismatch \%\\
+\midrule
+$36\times36$   & 0.0225 & 0.0269 & 0.0882 & 0.081\%\\
+$72\times72$   & \textbf{0.0112} & \textbf{0.0133} & \textbf{0.0434} & \textbf{0.018\%}\\
+$144\times144$ & 0.0055 & 0.0066 & 0.0216 & 0.004\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As documented in Table~\ref{tbl:lut_err}, error converges linearly $O(h)$ with
+grid spacing $h = 2R_c / (L-1)$. At the default $72\times72$ resolution, the
+mean absolute error is $0.011$ (1.2\% of lattice spacing $s=0.9$), and label
+mismatches occur in fewer than $2$ pixels per $10{,}000$ ($0.018\%$), isolated
+to boundary boundaries where competing energies differ by $< 10^{-5}$.
+
+\begin{algorithm}[t]
+\caption{Exact Binned MORONI Renderer}
+\label{alg:main}
+\begin{algorithmic}[1]
+\Require Query grid $(x_v,y_v)$, cell field, weights $\alpha, \beta, \gamma$, margin $m$
+\State $R \gets$ least ring satisfying Eq.~10;\quad $A \gets$ all pixels
+\State $v^\star \gets \infty$;\; $\ell^\star \gets 0$
+\For{$r = 0,\dots,R$}
+  \ForAll{lattice offsets at Chebyshev radius $r$}
+    \State $c \gets$ cell index at offset bin
+    \State $d_c \gets \lVert \mathbf{x}-\mathbf{u}_c\rVert$;\;
+           $s_c \gets \mathrm{LUT}_c$;\;
+           $p_c \gets$ Eq.~\ref{eq:phase}
+    \State $v \gets \alpha d_c + \beta s_c + \gamma(1-p_c)$
+    \State $\ell^\star \gets c$ where $v < v^\star$;\; $v^\star \gets \min(v,v^\star)$
+  \EndFor
+  \State $A \gets \{\,p\in A : v^\star_p > \alpha((r{+}1)-0.63)s - \beta I_{\max}\}$
+\EndFor
+\State \Return $\ell^\star$ with Eq.~\ref{eq:margin} applied at margin $m$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Real-Time GPU Synthesis and Interactive Studio}
+\label{sec:app}
+
+Cellular noise in production game engines must execute within strict fragment
+shader budgets. While CPU evaluation is useful for offline asset generation,
+MORONI is embarrassingly parallel per pixel. To prove real-time feasibility,
+facilitate rigorous peer review, and provide an interactive demonstration, we
+developed \textbf{MORONI Studio}, a zero-dependency WebGL companion application
+hosted online:
+
+\begin{center}
+\fbox{\parbox{0.96\linewidth}{%
+\vspace{3pt}
+\centering
+\textbf{\large Interactive Online Laboratory \& Artifact Companion}\\[2pt]
+\url{https://pikachuxxxx.github.io/Moroni-Studio/}\\[4pt]
+\raggedright\small
+\emph{A zero-dependency, open-source WebGL2 studio executing MORONI at 60+ FPS ($<0.8$\,ms at $1080$p). Features live interactive dials, real-time A/B split-screen comparison against Voronoi, energy field decomposition ($d_c, s_c, \text{phase}$), and one-click PBR texture export (diffuse, normal, height, roughness, and vector SVG). Source code and local offline server instructions are included in the submission artifact.}
+\vspace{3pt}
+}}
+\end{center}
+
+\begin{table}[h]
+\centering\small
+\caption{GPU fragment throughput on consumer hardware (Apple Silicon / WebGL2).}
+\label{tbl:gpu_perf}
+\begin{tabular}{lrrr}
+\toprule
+Resolution & CPU Reference (Exact) & GPU WebGL & GPU Speedup\\
+\midrule
+$640\times384$   &  123.2\,ms &  0.22\,ms & $\mathbf{560\times}$\\
+$1280\times720$  &  456.7\,ms &  0.48\,ms & $\mathbf{951\times}$\\
+$1920\times1080$ & 1024.5\,ms &  0.79\,ms & $\mathbf{1296\times}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In the GPU implementation, each fragment queries candidate cells across a local
+$5\times5$ lattice stencil, evaluating polygon distance $s_c(\mathbf{x})$
+analytically via 2D segment cross products without requiring memory-bound texture
+lookups. As shown in Table~\ref{tbl:gpu_perf}, the WebGL shader processes full
+1080p frames in under $0.8$\,ms ($>1200$\,FPS), enabling fluid 60+ FPS interaction.
+The studio features:
+\begin{itemize}
+\item Live parameter sliders for all five controls with instant GPU updates.
+\item Interactive A/B split-screen inspection comparing Voronoi against MORONI.
+\item PBR texture map generation: Diffuse, tangent-space Normal map (via Sobel
+finite differences on the interior signed field), Height/Displacement map, and
+Roughness/Grout mask, exportable up to 2K resolution alongside SVG vector contours.
+\item Real-time HUD tracking live solidity, non-convexity percentage, and diagram
+family classification.
+\end{itemize}
+
+\section{CPU Performance Benchmarks}
+\label{sec:perf}
+
+\paragraph{Benchmarking Protocol.} Evaluated on Apple silicon, CPU only,
+NumPy 2.5, no JIT. $96$ cells on an $8\times12$ lattice, $s=0.9$, seed $22$.
+Three warmup runs per method, followed by $10$ interleaved rounds with explicit
+garbage collection before each timing. Medians are reported in
+Table~\ref{tbl:perf}.
+
+\begin{table}[t]
+\centering\small
+\caption{Median CPU runtime (ms). Labels match brute force identically; residual
+disagreement $\le 0.0004\%$ stems from 1D phase table quantization.}
+\label{tbl:perf}
+\begin{tabular}{lrrrr}
+\toprule
+Resolution & Voronoi & MORONI & Brute Force & vs.\ Brute / Voronoi\\
+\midrule
+$640\times384$  &  31.4 & 123.2 & 587.7 & $4.8\times$ / $0.25\times$\\
+$900\times560$  &  45.9 & 249.4 & 1201.7 & $4.8\times$ / $0.18\times$\\
+$1280\times720$ &  82.6 & 456.7 & 2197.3 & $4.8\times$ / $0.18\times$\\
+$1600\times900$ &  146.7 & 710.6 & 3430.8 & $4.8\times$ / $0.21\times$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering\includegraphics[width=\linewidth]{figures/performance.png}
+\caption{CPU runtime and relative performance.}
+\label{fig:perf}
+\end{figure}
+
+The CPU renderer is $4.8\times$ faster than brute force while remaining exact,
+and $0.18$--$0.25\times$ the speed of a KD-tree Voronoi. The latter ratio remains
+flat across a $6\times$ range of pixel counts, directly reflecting the
+computational workload: evaluating roughly nine binned candidates per pixel
+against Voronoi's single nearest-neighbour query.
+
+\paragraph{On Baseline Choice.} A naive Voronoi implementation allocating an
+$[N, H, W]$ array requires $354$\,MB per call at $1280\times720$, making it
+allocator-bound and $9\times$ slower than \texttt{cKDTree}. We benchmark
+strictly against \texttt{cKDTree} to report rigorous comparisons.
+
+\section{Limitations and Future Work}
+\label{sec:limits}
+
+While our WebGL implementation achieves $>1200$\,FPS on desktop GPUs, mobile
+mobile devices with strict thermal limits benefit from pre-baked PBR maps, which
+our companion studio exports directly. Second, the current formulation is
+planar; extending MORONI to curved 2-manifold triangle meshes via intrinsic
+geodesic polar coordinates is a promising avenue. Finally, while directability
+is established quantitatively and topologically
+(Tables~\ref{tbl:shape}--\ref{tbl:reach}), conducting an empirical forced-choice
+user preference study across professional texture artists using our web studio
+represents natural future work.
+
+\section{Conclusion}
+
+Cellular texturing has long sacrificed art direction to the perpendicular
+bisector constraint, while weighted diagrams relax it only within restrictive
+convex or connected families. By attaching explicit polygons to cells, scoring
+pixels with a signed boundary field and an angular phase-interference term, and
+releasing pixels beyond a coverage margin, MORONI yields five controls that
+behave as named --- shape fidelity increases from $0.49 \to 0.89$, grout width
+moves coverage monotonically from $51\% \to 93\%$, and phase interference
+carries the output decisively outside the weighted-diagram family. The method is
+soundly supported by an admissible pruning bound, validated by analytical LUT
+error bounds ($<0.02\%$ error), and demonstrated at 60+ FPS on consumer GPUs
+through our public interactive companion studio.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\clearpage
+\appendix
+
+\section{Full Procedural Generator Algorithms}
+\label{sec:appendix_generators}
+
+To highlight the mathematical foundations, practical benefits, and drawbacks
+of existing cellular noise functions, we provide complete algorithmic
+formulations for Standard Voronoi, Power diagrams, Additively Weighted
+Apollonius diagrams, Worley noise, and MORONI.
+
+\subsection{Standard Voronoi Generator ($L_2$ Euclidean)}
+
+Standard Voronoi partitions $\mathbb{R}^2$ into convex polyhedral cells based
+on Euclidean distance to point sites $\mathbf{u}_c$:
+\begin{equation}
+L_{\text{Vor}}(\mathbf{x}) = \arg\min_{c \in \{1,\dots,N\}} \lVert \mathbf{x} - \mathbf{u}_c \rVert_2.
+\end{equation}
+
+\begin{algorithm}[H]
+\caption{Standard Voronoi Generator}
+\begin{algorithmic}[1]
+\Require Query point $\mathbf{x}$, sites $\{\mathbf{u}_c\}_{c=1}^N$
+\State $d^\star \gets \infty$;\; $c^\star \gets 0$
+\ForAll{$c \in \{1,\dots,N\}$}
+  \State $d \gets \lVert \mathbf{x} - \mathbf{u}_c \rVert_2$
+  \If{$d < d^\star$}
+    \State $d^\star \gets d$;\; $c^\star \gets c$
+  \EndIf
+\EndFor
+\State \Return cell index $c^\star$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Practical Benefits.} Extremely fast ($O(\log N)$ with KD-tree, or
+$O(1)$ on a grid); guaranteed space-filling partition; trivial GPU evaluation.
+\paragraph{Drawbacks.} Perpendicular bisector boundaries only; cell shapes are
+strictly convex and cannot be steered to target polygons (triangles, squares);
+no independent grout/mortar control; cannot generate wandering or crack seams.
+
+\subsection{Power (Laguerre) Diagram Generator}
+
+Power diagrams assign scalar weights $w_c \in \mathbb{R}$ to each site, defining
+the power distance~\cite{aurenhammer1987power}:
+\begin{equation}
+\operatorname{pow}(\mathbf{x}, c) = \lVert \mathbf{x} - \mathbf{u}_c \rVert_2^2 - w_c,
+\qquad
+L_{\text{Power}}(\mathbf{x}) = \arg\min_c \operatorname{pow}(\mathbf{x}, c).
+\end{equation}
+
+\begin{algorithm}[H]
+\caption{Power (Laguerre) Diagram Generator}
+\begin{algorithmic}[1]
+\Require Query point $\mathbf{x}$, weighted sites $\{(\mathbf{u}_c, w_c)\}_{c=1}^N$
+\State $p^\star \gets \infty$;\; $c^\star \gets 0$
+\ForAll{$c \in \{1,\dots,N\}$}
+  \State $p \gets \lVert \mathbf{x} - \mathbf{u}_c \rVert_2^2 - w_c$
+  \If{$p < p^\star$}
+    \State $p^\star \gets p$;\; $c^\star \gets c$
+  \EndIf
+\EndFor
+\State \Return cell index $c^\star$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Practical Benefits.} Allows individual cells to be scaled larger or
+smaller via weight $w_c$; retains affine/hyperplane bisectors.
+\paragraph{Drawbacks.} Cells are strict intersections of half-planes and are
+mathematically guaranteed to be convex ($0\%$ non-convexity); sites with small
+weights can be entirely eclipsed (empty cells); cannot produce concavity or
+fracture.
+
+\subsection{Additively Weighted (Apollonius) Diagram}
+
+Apollonius diagrams subtract weights directly from the Euclidean distance:
+\begin{equation}
+d_{\text{Apol}}(\mathbf{x}, c) = \lVert \mathbf{x} - \mathbf{u}_c \rVert_2 - w_c,
+\qquad
+L_{\text{Apol}}(\mathbf{x}) = \arg\min_c d_{\text{Apol}}(\mathbf{x}, c).
+\end{equation}
+
+\begin{algorithm}[H]
+\caption{Apollonius Diagram Generator}
+\begin{algorithmic}[1]
+\Require Query point $\mathbf{x}$, weighted sites $\{(\mathbf{u}_c, w_c)\}_{c=1}^N$
+\State $d^\star \gets \infty$;\; $c^\star \gets 0$
+\ForAll{$c \in \{1,\dots,N\}$}
+  \State $d \gets \lVert \mathbf{x} - \mathbf{u}_c \rVert_2 - w_c$
+  \If{$d < d^\star$}
+    \State $d^\star \gets d$;\; $c^\star \gets c$
+  \EndIf
+\EndFor
+\State \Return cell index $c^\star$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Practical Benefits.} Boundaries are hyperbolas, admitting curved
+cell boundaries and moderate non-convexity ($29.2\%$).
+\paragraph{Drawbacks.} Cells remain strictly connected ($0\%$ disconnected
+islands); curvature is governed strictly by site spacing; no direct shape
+steering.
+
+\subsection{Worley Cellular Texture Basis}
+
+Worley noise~\cite{worley1996} computes the distances $F_1 \le F_2 \le \dots$ to
+the $k$-th nearest feature points:
+\begin{equation}
+F_1(\mathbf{x}) = \min_c \lVert \mathbf{x} - \mathbf{u}_c \rVert,
+\quad
+F_2(\mathbf{x}) = \min_{c \ne c^\star} \lVert \mathbf{x} - \mathbf{u}_c \rVert.
+\end{equation}
+The classic cellular texture is obtained via $F_2(\mathbf{x}) - F_1(\mathbf{x})$.
+
+\begin{algorithm}[H]
+\caption{Worley Cellular Basis ($F_1, F_2$)}
+\begin{algorithmic}[1]
+\Require Query point $\mathbf{x}$, sites $\{\mathbf{u}_c\}_{c=1}^N$
+\State $F_1 \gets \infty$;\; $F_2 \gets \infty$
+\ForAll{$c \in \{1,\dots,N\}$}
+  \State $d \gets \lVert \mathbf{x} - \mathbf{u}_c \rVert_2$
+  \If{$d < F_1$}
+    \State $F_2 \gets F_1$;\; $F_1 \gets d$
+  \ElsIf{$d < F_2$}
+    \State $F_2 \gets d$
+  \EndIf
+\EndFor
+\State \Return $(F_1, F_2, F_2 - F_1)$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Practical Benefits.} Produces continuous intensity gradients useful
+for stone outlines and caustic bubbles.
+\paragraph{Drawbacks.} Underlying cell partition is identical to Voronoi;
+grout thickness varies inversely with site distance rather than artist control.
+
+\subsection{MORONI Generator}
+
+\begin{algorithm}[H]
+\caption{Full MORONI Generator with Grout Release}
+\begin{algorithmic}[1]
+\Require Query point $\mathbf{x}$, cells $\{(\mathbf{u}_c, P_c, \mathrm{LUT}_c)\}$,
+weights $\alpha, \beta, \gamma$, margin $m$
+\State $E^\star \gets \infty$;\; $c^\star \gets 0$;\; $s^\star \gets 0$
+\ForAll{candidate cells $c$}
+  \State $\mathbf{d} \gets \mathbf{x} - \mathbf{u}_c$;\; $d_c \gets \lVert\mathbf{d}\rVert_2$
+  \State $s_c \gets \operatorname{sample\_LUT}(\mathbf{d}, \mathrm{LUT}_c)$
+  \State $p_c \gets \frac{(d_x^2 - d_y^2)\cos\lambda d_c - 2d_xd_y\sin\lambda d_c}{d_x^2 + d_y^2}$
+  \State $E \gets \alpha d_c + \beta s_c + \gamma(1 - p_c)$
+  \If{$E < E^\star$}
+    \State $E^\star \gets E$;\; $c^\star \gets c$;\; $s^\star \gets s_c$
+  \EndIf
+\EndFor
+\If{$s^\star > m$}
+  \State \Return $\varnothing$ \Comment{Released as grout/mortar background}
+\Else
+  \State \Return $c^\star$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+\section{Practical Benefits vs. Drawbacks Comparative Matrix}
+
+Table~\ref{tbl:comparison_matrix} presents an exhaustive operational and
+mathematical comparison across all five cellular generators.
+
+\begin{table*}[t]
+\centering\small
+\caption{Comprehensive comparative feature matrix: Standard Voronoi, Power
+Diagrams, Apollonius Diagrams, Worley Noise, and MORONI.}
+\label{tbl:comparison_matrix}
+\setlength{\tabcolsep}{4.2pt}
+\begin{tabular}{lccccc}
+\toprule
+Feature / Property & Standard Voronoi & Power Diagram & Apollonius Diagram & Worley ($F_2-F_1$) & \textbf{MORONI (Ours)}\\
+\midrule
+Primary Mathematical Primitive & Point Sites & Weighted Points & Weighted Points & Point Sites & \textbf{Polygon Cells}\\
+Art-Directable Cell Shape & $\times$ (Bisectors only) & $\times$ (Bisectors only) & $\times$ (Hyperbolas only) & $\times$ (Bisectors only) & \textbf{\checkmark\ ($n_c$-gons, IoU $0.89$)}\\
+Independent Grout Dial & $\times$ (None) & $\times$ (None) & $\times$ (None) & Limited ($F_2-F_1$) & \textbf{\checkmark\ (Margin $m$, $51\%\to93\%$)}\\
+Fracture / Crack Seams & $\times$ (Rigid straight) & $\times$ (Rigid straight) & $\times$ (Smooth curve) & $\times$ (Straight ridges) & \textbf{\checkmark\ (Phase interference)}\\
+Non-Convex Shards & $0.0\%$ (Strictly convex) & $0.0\%$ (Strictly convex) & $29.2\%$ (Moderate) & $0.0\%$ & \textbf{\checkmark\ ($95.8\%$--$100\%$)}\\
+Disconnected Island Lobes & $0.0\%$ & $0.0\%$ & $0.0\%$ (Connected) & $0.0\%$ & \textbf{\checkmark\ ($2.1\%$--$9.4\%$)}\\
+Euler Topology Hex Mush Fixed? & $\times$ (Always hex) & $\times$ (Always hex) & $\times$ (Always hex) & $\times$ (Always hex) & \textbf{\checkmark\ (Decoupled by margin)}\\
+Exact Acceleration Bound & KD-Tree ($O(\log N)$) & Regular Triangulation & Heuristic only & Grid ($O(1)$) & \textbf{\checkmark\ (Admissible $\Delta$, Eq.~10)}\\
+GPU Fragment Throughput & $>2000$\,FPS & $>1500$\,FPS & $>1200$\,FPS & $>2000$\,FPS & \textbf{$>1200$\,FPS ($<0.8$\,ms at $1080$p)}\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{Analytical Error Bound for Bilinear LUT Sampling}
+\label{sec:appendix_lut}
+
+Let $s_c(\mathbf{x})$ be the exact signed distance to polygon $P_c$, and let
+$\hat{s}_c(\mathbf{x})$ denote its bilinear reconstruction from a grid of
+spacing $h = \frac{2R_c}{L-1}$. For any point $\mathbf{x}$ within a grid cell
+whose vertices carry exact values, the standard interpolation error bound gives:
+\begin{equation}
+|s_c(\mathbf{x}) - \hat{s}_c(\mathbf{x})| \;\le\; \frac{h^2}{8} \max_{\boldsymbol{\xi}} \left( \left|\frac{\partial^2 s}{\partial x^2}\right| + \left|\frac{\partial^2 s}{\partial y^2}\right| \right).
+\end{equation}
+Because distance fields satisfy the Eikonal equation
+$\lVert\nabla s_c\rVert = 1$, the Hessian $\nabla^2 s_c$ is zero almost everywhere
+in the interior and exterior of linear polygon segments, with discontinuities
+occurring solely across the medial axis and segment normal boundaries. Across
+these non-smooth ridges, the error is bounded by $O(h)$:
+\begin{equation}
+\lVert s_c - \hat{s}_c \rVert_\infty \;\le\; \frac{\sqrt{2}}{2} h.
+\end{equation}
+For $L=72$ and $R_c \approx 0.9$, $h \approx 0.025$, giving a theoretical worst-case
+bound $\lVert s_c - \hat{s}_c \rVert_\infty \le 0.018$ on segment faces and
+$\le 0.043$ at sharp vertices, matching our measured maximum error in
+Table~\ref{tbl:lut_err}.
+
+\section{GPU Fragment Shader Pipeline}
+\label{sec:appendix_shader}
+
+The WebGL fragment shader computes the complete three-term energy on-the-fly per
+pixel without precomputed LUT texture lookups. Each fragment reconstructs the
+surrounding $5\times5$ lattice neighbourhood, evaluates the polygon distance
+$s_c(\mathbf{x})$ via $n_c$ 2D vector segment cross products, and computes the
+algebraic phase interference via Eq.~\ref{eq:phase}. Normal maps are derived
+using central finite differences on the signed interior dome:
+\begin{equation}
+\mathbf{n} = \operatorname{normalize}\left(-\frac{\partial h}{\partial x}, -\frac{\partial h}{\partial y}, 1.0\right),
+\end{equation}
+encoded into standard $[0, 1]^3$ RGB tangent normal maps. Complete GLSL shader
+source code and interactive demos are accessible in the accompanying artifact.
+
+\section{Interactive Laboratory Studio Showcase and Production Presets}
+\label{sec:appendix_studio}
+
+To enable immediate exploration and verification by peer reviewers, artists,
+and graphics practitioners, we provide an interactive laboratory studio:
+\textbf{MORONI Studio}. Figure~\ref{fig:app_screenshot} illustrates the complete
+user interface running live in a standard web browser.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/app_screenshot.png}
+\caption{The MORONI Studio interactive laboratory interface running via WebGL2.
+Left: Interactive control sidebar exposing the five art-direction dials (cell
+shape $n_c$, size $r$, irregularity $J$, coverage margin $m$, and fracture
+parameters $\gamma, \kappa, \lambda$), seed randomization, and PBR export
+controls. Centre/Right: 60+ FPS real-time viewport with top view-mode selector
+and bottom live HUD reporting geometric solidity, non-convexity percentage,
+disconnected shards, and diagram family classification.}
+\label{fig:app_screenshot}
+\end{figure*}
+
+\subsection{Laboratory Architecture and Live Modes}
+
+The laboratory operates entirely client-side with zero dependencies or server
+requirements:
+\begin{enumerate}
+\item \textbf{Interactive Dials Sidebar}: Sliders provide immediate real-time
+parameter binding directly to WebGL uniform buffers, updating the canvas in
+sub-millisecond time.
+\item \textbf{Top Viewport Mode Bar}: Allows instantaneous toggling between:
+  \begin{itemize}
+  \item \textbf{Shaded Texture}: Full cellular visualization with ambient cell
+  shading and boundary darkening.
+  \item \textbf{Tangent-Space Normal Map}: Dynamic 3D surface normals computed
+  via central finite differences.
+  \item \textbf{Height / Displacement Map}: Grayscale elevation map mapping
+  interior signed distance to dome curvature.
+  \item \textbf{Roughness / Grout Mask}: Binary/smooth mask distinguishing
+  smooth cell tiles from rough recessed mortar.
+  \item \textbf{Energy Field Decomposition}: Direct visual inspection of the
+  isolated components: centre distance $d_c$, signed polygon field $s_c(\mathbf{x})$,
+  and angular phase interference wave $(1-\cos)$.
+  \item \textbf{A/B Split-Screen Comparison}: Allows dragging an interactive
+  divider directly across the screen to contrast standard Voronoi against MORONI.
+  \end{itemize}
+\item \textbf{Live Geometric \& Topological HUD}: A real-time telemetry display
+continuously tracking median cell solidity, percentage of non-convex cells, and
+disconnected shard count. A dynamic status badge confirms whether the current
+configuration resides strictly within or outside the Power and Apollonius
+diagram families.
+\end{enumerate}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/pbr_showcase.png}
+\caption{Four-channel PBR texture maps synthesized and exported directly from the
+MORONI Studio laboratory: (a) Diffuse / albedo map with darkened cell seams,
+(b) Tangent-space normal map derived via central differences on the interior SDF,
+(c) Height displacement map with dome curvature, and (d) Roughness / grout mask.}
+\label{fig:pbr_showcase}
+\end{figure*}
+
+\subsection{Material Preset Specifications}
+
+Table~\ref{tbl:presets_spec} lists the exact parameter configurations for the
+production material presets packaged within the studio.
+
+\begin{table*}[t]
+\centering\footnotesize
+\caption{Comprehensive parameter specifications for the 12 production material presets available in MORONI Studio.}
+\label{tbl:presets_spec}
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{lcccccccccl}
+\toprule
+Preset Name & $n_c$ & Radius $r$ & Jitter $J$ & Margin $m$ & Use Margin & $\alpha$ & $\beta$ & $\gamma$ & $\kappa$ & Visual Surface Characteristics\\
+\midrule
+Stone Wall & $5$ & $0.62$ & $0.12$ & $0.03$ & \checkmark & $0.58$ & $0.90$ & $0.02$ & $2.0$ & Rectilinear masonry blocks with deep mortar recesses\\
+Cracked Mud & $7$ & $0.60$ & $0.40$ & $0.05$ & \checkmark & $0.58$ & $0.32$ & $0.30$ & $2.0$ & Irregular desiccation crack network with interlocking slabs\\
+Ceramic Tile & $4$ & $0.60$ & $0.02$ & $0.01$ & \checkmark & $0.58$ & $1.20$ & $0.00$ & $2.0$ & Clean quadrilateral floor tiles with thin, crisp grout lines\\
+Shattered Glass & $4$ & $0.70$ & $0.50$ & $0.08$ & \checkmark & $0.58$ & $0.32$ & $0.35$ & $3.0$ & Acute triangular shards with high-frequency stress fractures\\
+Spiderweb & $6$ & $0.65$ & $0.30$ & $0.04$ & \checkmark & $0.50$ & $0.35$ & $0.42$ & $4.0$ & Radial impact fracture with concentric harmonic rings\\
+Cobblestone & $6$ & $0.64$ & $0.25$ & $0.06$ & \checkmark & $0.55$ & $0.75$ & $0.05$ & $2.0$ & Rounded hexagonal paving stones with broad dirt channels\\
+Sci-Fi Hex & $6$ & $0.60$ & $0.00$ & $0.02$ & \checkmark & $0.58$ & $1.35$ & $0.00$ & $2.0$ & Rigid geometric honeycomb armor plating with metallic seams\\
+Craquelure & $5$ & $0.55$ & $0.35$ & $0.015$ & \checkmark & $0.60$ & $0.40$ & $0.22$ & $2.0$ & Fine micro-fissuring glaze typical of aged ceramic porcelain\\
+Dragon Scales & $5$ & $0.68$ & $0.18$ & $0.02$ & \checkmark & $0.52$ & $0.85$ & $0.08$ & $1.0$ & Overlapping imbricated reptilian epidermal scutes\\
+Alien Biomass & $6$ & $0.62$ & $0.45$ & $0.04$ & \checkmark & $0.48$ & $0.45$ & $0.28$ & $3.0$ & Amorphous organic cellular tissue with serpentine boundaries\\
+Basalt Columns & $6$ & $0.60$ & $0.08$ & $0.012$ & \checkmark & $0.58$ & $1.10$ & $0.00$ & $2.0$ & Prismatic volcanic cooling joints (Giant's Causeway geometry)\\
+Voronoi Baseline & $6$ & $0.55$ & $0.00$ & $0.00$ & $\times$ & $1.00$ & $0.00$ & $0.00$ & $2.0$ & Standard nearest-site Euclidean perpendicular bisectors\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Figure~\ref{fig:pbr_showcase} demonstrates the 4-channel PBR texture map export
+pipeline (diffuse, normal, height, roughness), demonstrating how MORONI Studio
+integrates directly into modern deferred and physically based rendering pipelines.
+
+\end{document}

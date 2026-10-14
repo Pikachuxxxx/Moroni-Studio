@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MORONI Studio — Procedural Cellular & Fracture Engine</title>
+    <meta name="description" content="Art-directable cellular textures via signed boundary fields and angular interference.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Header Bar -->
+    <header id="studio-header">
+        <div class="header-brand">
+            <div class="brand-logo">M</div>
+            <div>
+                <h1 class="brand-title">MORONI Studio</h1>
+                <div class="brand-subtitle">Real-Time Procedural Cellular & Fracture Engine</div>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <!-- Preset Dropdown -->
+            <div class="preset-control-wrap">
+                <span class="control-label">Preset:</span>
+                <select id="preset-select" class="studio-select">
+                    <option value="stone_wall">🧱 Medieval Stone Wall</option>
+                    <option value="cracked_mud">🏜️ Cracked Mud / Desiccation</option>
+                    <option value="ceramic_tile">🟦 Ceramic Floor Tile</option>
+                    <option value="shattered_glass">🔨 Shattered Tempered Glass</option>
+                    <option value="spiderweb">🕸️ Spiderweb Radial Fracture</option>
+                    <option value="cobblestone">🪨 Cobblestone Street Pavement</option>
+                    <option value="scifi_hex">🛸 Sci-Fi Hex Hull Plating</option>
+                    <option value="craquelure">🏺 Porcelain Craquelure Glaze</option>
+                    <option value="dragon_scales">🐉 Dragon Scales / Reptilian</option>
+                    <option value="alien_biomass">🧬 Alien Biomass Tissue</option>
+                    <option value="basalt_columns">🏛️ Basalt Prisms (Giant's Causeway)</option>
+                    <option value="voronoi_baseline">📐 Classic Voronoi Baseline</option>
+                </select>
+            </div>
+
+            <button class="studio-btn" id="btn-randomize-seed" title="Randomize Lattice Seed">
+                🎲 Re-Seed (<span id="param-seed-val">22</span>)
+            </button>
+
+            <button class="studio-btn studio-btn-primary" id="btn-export-all" title="Export 4-Channel PBR Texture Maps">
+                📥 Export PBR Maps
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div id="studio-layout">
+        <!-- Left Sidebar: Controls / Inspector -->
+        <aside id="controls-sidebar">
+            <!-- 1. Geometry & Shape -->
+            <div class="control-section">
+                <div class="section-title">Polygon Geometry & Shape</div>
+                <div class="section-body">
+                    <div class="param-row">
+                        <span class="param-label" title="Polygon vertices">Vertex Count (nc)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-sides" min="3" max="8" step="1" value="5">
+                        </div>
+                        <span class="param-val" id="param-sides-val">5</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Cell radius">Radius (r)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-radius" min="0.30" max="0.85" step="0.01" value="0.62">
+                        </div>
+                        <span class="param-val" id="param-radius-val">0.62</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Angular vertex perturbation">Irregularity (J)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-jitter" min="0.00" max="0.60" step="0.01" value="0.12">
+                        </div>
+                        <span class="param-val" id="param-jitter-val">0.12</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Grout & Coverage Margin -->
+            <div class="control-section">
+                <div class="section-title">Grout & Coverage Margin</div>
+                <div class="section-body">
+                    <div class="param-row">
+                        <span class="param-label" title="Mortar release threshold">Margin (m)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-margin" min="-0.10" max="0.25" step="0.01" value="0.03">
+                        </div>
+                        <span class="param-val" id="param-margin-val">0.03</span>
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="param-use-margin" checked>
+                        <label for="param-use-margin">Enable Grout Release (sc > m)</label>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Edge boundary darkening">Edge Shadow</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-edge-dark" min="0.0" max="0.8" step="0.05" value="0.30">
+                        </div>
+                        <span class="param-val" id="param-edge-dark-val">0.30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Fracture & Phase Interference -->
+            <div class="control-section">
+                <div class="section-title">Fracture Dynamics & Phase Wave</div>
+                <div class="section-body">
+                    <div class="param-row">
+                        <span class="param-label" title="Fracture wave weight">Fracture (gamma)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-gamma" min="0.00" max="0.45" step="0.01" value="0.02">
+                        </div>
+                        <span class="param-val" id="param-gamma-val">0.02</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Polygon boundary snap weight">Shape Snap (beta)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-beta" min="0.00" max="1.50" step="0.02" value="0.90">
+                        </div>
+                        <span class="param-val" id="param-beta-val">0.90</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Centre distance weight">Size Weight (alpha)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-alpha" min="0.10" max="1.20" step="0.02" value="0.58">
+                        </div>
+                        <span class="param-val" id="param-alpha-val">0.58</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Angular wave harmonic">Harmonic (kappa)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-kappa" min="1.0" max="6.0" step="1.0" value="2.0">
+                        </div>
+                        <span class="param-val" id="param-kappa-val">2.0</span>
+                    </div>
+
+                    <div class="param-row">
+                        <span class="param-label" title="Radial wave frequency">Radial Freq (lambda)</span>
+                        <div class="param-slider-wrap">
+                            <input type="range" id="param-lambda" min="0.2" max="4.0" step="0.1" value="1.0">
+                        </div>
+                        <span class="param-val" id="param-lambda-val">1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Export Maps -->
+            <div class="control-section">
+                <div class="section-title">PBR Texture Export</div>
+                <div class="section-body">
+                    <div class="btn-grid-2">
+                        <button class="studio-btn" id="btn-export-diffuse">Albedo / Diffuse</button>
+                        <button class="studio-btn" id="btn-export-normal">Tangent Normal</button>
+                        <button class="studio-btn" id="btn-export-height">Height / Disp</button>
+                        <button class="studio-btn" id="btn-export-roughness">Roughness Mask</button>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <button class="studio-btn" id="btn-export-svg" style="width: 100%;">
+                            📐 Export Vector SVG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Main: Scene Viewport -->
+        <main id="viewport-panel">
+            <!-- Viewport Top Toolbar -->
+            <div class="viewport-toolbar">
+                <div class="viewport-modes">
+                    <button class="view-btn active" data-mode="0">Shaded</button>
+                    <button class="view-btn" data-mode="1">Normal</button>
+                    <button class="view-btn" data-mode="2">Height</button>
+                    <button class="view-btn" data-mode="3">Roughness</button>
+                    <button class="view-btn" data-mode="4">Distance (dc)</button>
+                    <button class="view-btn" data-mode="5">Signed SDF (sc)</button>
+                    <button class="view-btn" data-mode="6">Phase Wave</button>
+                    <button class="view-btn" data-mode="7" style="color: #f59f00;">A/B Split</button>
+                </div>
+                <div class="wireframe-toggle-wrap">
+                    <span>Wireframe</span>
+                    <input type="checkbox" id="toggle-wireframe">
+                </div>
+            </div>
+
+            <!-- Viewport Canvas Container -->
+            <div id="canvas-container">
+                <canvas id="viewport"></canvas>
+
+                <!-- Clean Telemetry / Profiler Stats Overlay -->
+                <div id="studio-stats-box">
+                    <div class="stats-header">
+                        <span>Live Telemetry</span>
+                        <span class="stat-highlight" id="fps-val">60.0 FPS</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>GPU Shader Latency:</span>
+                        <span class="stat-val" id="stat-gpu">0.48 ms</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Lattice Sites:</span>
+                        <span class="stat-val">96 Cells (8×12)</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Median Solidity:</span>
+                        <span class="stat-val" id="metric-solidity">0.984</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Non-Convex Shards:</span>
+                        <span class="stat-val" id="metric-nonconvex">37.5%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Disconnected Islands:</span>
+                        <span class="stat-val" id="metric-disconnected">0.0%</span>
+                    </div>
+                    <div class="stat-badge" id="falsification-badge">
+                        Outside Power Diagram Family
+                    </div>
+                </div>
+
+                <div id="split-hint">
+                    ↔ Drag horizontally to compare Voronoi (Left) vs MORONI (Right)
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="moroni-glsl.js"></script>
+    <script src="moroni-core.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+{
+ "shape_fidelity": [
+  {
+   "n": 3,
+   "voronoi": 0.4908529275513125,
+   "partition": 0.503704216939543,
+   "margin0": 0.8895057182413906
+  },
+  {
+   "n": 4,
+   "voronoi": 0.6262749704328116,
+   "partition": 0.6306801217743053,
+   "margin0": 0.8298879153555389
+  },
+  {
+   "n": 5,
+   "voronoi": 0.6986588091708175,
+   "partition": 0.7058554823935407,
+   "margin0": 0.8270270556993761
+  },
+  {
+   "n": 6,
+   "voronoi": 0.6865755144545252,
+   "partition": 0.6911991536826821,
+   "margin0": 0.7894324080647701
+  },
+  {
+   "n": 8,
+   "voronoi": 0.6831302940782426,
+   "partition": 0.6857970353355155,
+   "margin0": 0.7639507481780491
+  }
+ ],
+ "coverage": [
+  {
+   "margin": -0.1,
+   "coverage": 0.5130838815789474
+  },
+  {
+   "margin": -0.05,
+   "coverage": 0.6283854166666667
+  },
+  {
+   "margin": 0.0,
+   "coverage": 0.7223848684210527
+  },
+  {
+   "margin": 0.05,
+   "coverage": 0.7918174342105263
+  },
+  {
+   "margin": 0.12,
+   "coverage": 0.8562993421052632
+  },
+  {
+   "margin": 0.25,
+   "coverage": 0.9254660087719299
+  }
+ ],
+ "reachable": {
+  "voronoi": {
+   "disconnected_pct": 0.0,
+   "mean_components": 1.0,
+   "median_solidity": 1.0088043750814408,
+   "nonconvex_pct": 0.0
+  },
+  "moroni": {
+   "0.00": {
+    "disconnected_pct": 1.0416666666666665,
+    "mean_components": 1.0104166666666667,
+    "median_solidity": 0.9903612063919909,
+    "nonconvex_pct": 18.75
+   },
+   "0.05": {
+    "disconnected_pct": 0.0,
+    "mean_components": 1.0,
+    "median_solidity": 0.988804127132487,
+    "nonconvex_pct": 18.75
+   },
+   "0.10": {
+    "disconnected_pct": 0.0,
+    "mean_components": 1.0,
+    "median_solidity": 0.9836958541175722,
+    "nonconvex_pct": 37.5
+   },
+   "0.20": {
+    "disconnected_pct": 2.083333333333333,
+    "mean_components": 1.0208333333333333,
+    "median_solidity": 0.9427610746069167,
+    "nonconvex_pct": 95.83333333333334
+   },
+   "0.35": {
+    "disconnected_pct": 9.375,
+    "mean_components": 1.1041666666666667,
+    "median_solidity": 0.7884385143095047,
+    "nonconvex_pct": 100.0
+   }
+  }
+ }
+}

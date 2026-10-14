@@ -1,0 +1,90 @@
+{
+  "lut_accuracy": {
+    "lut_36": {
+      "lut_size": 36,
+      "mean_mae": 0.02253680257126689,
+      "mean_rmse": 0.026919864974915983,
+      "mean_l_inf": 0.06594978451728821,
+      "max_l_inf": 0.08823072910308838
+    },
+    "lut_72": {
+      "lut_size": 72,
+      "mean_mae": 0.011166942175477743,
+      "mean_rmse": 0.013328180890530348,
+      "mean_l_inf": 0.03237241923809051,
+      "max_l_inf": 0.04340684413909912
+    },
+    "lut_144": {
+      "lut_size": 144,
+      "mean_mae": 0.00553971350658685,
+      "mean_rmse": 0.0066159228701144455,
+      "mean_l_inf": 0.016077860612422227,
+      "max_l_inf": 0.021596387028694153
+    }
+  },
+  "baseline_comparison": {
+    "Voronoi (L2 Euclidean)": {
+      "median_solidity": 1.0088043750814408,
+      "nonconvex_pct": 0.0,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.6294120931256623
+    },
+    "Voronoi (L1 Manhattan)": {
+      "median_solidity": 0.9719161136832302,
+      "nonconvex_pct": 64.58333333333334,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.6237814593310633
+    },
+    "Voronoi (L_inf Chebyshev)": {
+      "median_solidity": 0.9526285591079047,
+      "nonconvex_pct": 76.04166666666666,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.6286993152585579
+    },
+    "Power (Laguerre) Diagram": {
+      "median_solidity": 1.0089996729724644,
+      "nonconvex_pct": 0.0,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.5372122691962996
+    },
+    "Apollonius Diagram": {
+      "median_solidity": 0.999595066082529,
+      "nonconvex_pct": 29.166666666666668,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.5613321054115108
+    },
+    "MORONI (gamma=0.00)": {
+      "median_solidity": 0.9903612063919909,
+      "nonconvex_pct": 18.75,
+      "mean_components": 1.0104166666666667,
+      "disconnected_pct": 1.0416666666666665,
+      "shape_fidelity_tri": 0.6354450824542964
+    },
+    "MORONI (gamma=0.10, default)": {
+      "median_solidity": 0.9836958541175722,
+      "nonconvex_pct": 37.5,
+      "mean_components": 1.0,
+      "disconnected_pct": 0.0,
+      "shape_fidelity_tri": 0.6204504783695542
+    },
+    "MORONI (gamma=0.20)": {
+      "median_solidity": 0.9427610746069167,
+      "nonconvex_pct": 95.83333333333334,
+      "mean_components": 1.0208333333333333,
+      "disconnected_pct": 2.083333333333333,
+      "shape_fidelity_tri": 0.5584046443136401
+    },
+    "MORONI (gamma=0.35)": {
+      "median_solidity": 0.7884385143095047,
+      "nonconvex_pct": 100.0,
+      "mean_components": 1.1041666666666667,
+      "disconnected_pct": 9.375,
+      "shape_fidelity_tri": 0.34584869533007145
+    }
+  }
+}
