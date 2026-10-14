@@ -1,51 +1,15 @@
-# MORONI Studio — Interactive WebGL Cellular Texture Generator
+# MORONI Studio
 
-An interactive companion application to the paper:
-**"MORONI: Polygon-Guided Cellular Textures via Roots-of-Unity Polygons and Phase-Modulated Boundaries"**
-*Phani Srikar*
+Interactive companion to **MORONI: Polygon-Guided Cellular Textures via Roots-of-Unity Polygons and Phase-Modulated Boundaries**, by Phani Srikar.
 
----
+Serve the repository root with `python -m http.server 8765 --bind 127.0.0.1`, then open http://127.0.0.1:8765/app/ . Serving the root also makes the validation fixture available at http://127.0.0.1:8765/app/validation.html . There is no JavaScript build step. The root `index.html` redirects to `app/` for static hosting.
 
-## Live Demo & Hosting
+The studio provides an unlit Paper Colors view, normal/height/roughness maps, energy-component views and a split comparison with Voronoi using the same sites and clipping rule. Shaded mode is removed. Twelve presets are visual starting points; their names do not imply physical material validation.
 
-This app is a **zero-dependency, purely client-side WebGL2/HTML5 application**. It requires no build step, no Node.js/npm dependencies, and zero server infrastructure.
+PNG export widths are 512, 1024 and 2048 pixels; height follows the lattice aspect ratio. The GPU renders each export directly with one sample per pixel and no wireframe overlay. The optional four-sample preview averages four offsets; it is not an analytical prefilter. Albedo contains no lighting. Normals use a square-root height and central differences at fixed world offsets, with positive green pointing down the image. Import data maps as linear data, and invert green if the target engine uses the opposite convention. Roughness is an illustrative 0.25 in cells and 0.95 in gaps. **Export Input Polygons** writes generating polygons, not final assignment contours.
 
-- **Live URL**: [https://pikachuxxxx.github.io/Moroni-Studio/](https://pikachuxxxx.github.io/Moroni-Studio/)
+The HUD samples GPU labels at 180 x 120. Solidity and 8-connected components are descriptive raster measurements, with a minimum component area of 0.0001 of the image. They do not prove continuous nonconvexity, disconnection or exclusion from a weighted-diagram family. GPU draw time comes from timer queries when supported; unavailable timing is shown explicitly. Display refresh FPS is separate from GPU execution time.
 
-### 1. Instant Local Preview
-To test or run locally:
-```bash
-cd app
-python3 -m http.server 8080
-```
-Open [http://localhost:8080](http://localhost:8080) in any modern browser (Chrome, Safari, Firefox, Edge).
+WebGL2 is the primary path. Basic CPU image/map fallback shares geometry, height and palette; its normals use raster differences and can differ from GPU exports. GPU diagnostic views, split comparison and GPU timing require WebGL2. Browser/device coverage is limited to the environment recorded in the validation report.
 
-### 2. Hosting
-- **GitHub Pages**:
-  The `gh-pages` branch serves this directory directly at `https://pikachuxxxx.github.io/Moroni-Studio/`.
-
----
-
-## Features
-
-1. **Real-Time 60+ FPS GPU Synthesis**:
-   - Implements the complete MORONI 3-term energy formulation directly in a GLSL fragment shader:
-     $$E_c(\mathbf{x}) = \alpha d_c + \beta s_c(\mathbf{x}) + \gamma (1 - \cos(\kappa \theta_c + \lambda d_c))$$
-   - Instant response to all 5 interactive art-direction dials (Shape $n_c$, Size $r$, Irregularity $J$, Grout $m$, and Fracture $\gamma$).
-
-2. **A/B Split-Screen Comparison**:
-   - Compare traditional Voronoi directly against MORONI side-by-side with an interactive draggable divider.
-
-3. **Energy Component Decomposition**:
-   - Inspect individual energy fields live: Center Distance $d_c$, Signed Polygon SDF $s_c$, and Angular Phase Wave.
-
-4. **PBR Texture Studio & Exporter**:
-   - Generates and exports production-ready textures up to 2K resolution:
-     - **Diffuse / Color Map** (PNG)
-     - **Tangent-Space Normal Map** (Central finite differences, PNG)
-     - **Height / Displacement Map** (Smooth dome interior SDF profile, PNG)
-     - **Roughness / Grout Mask** (PNG)
-     - **SVG Vector Contours** (Clean vector polygons)
-
-5. **Live Geometric & Topological Metrics**:
-   - Real-time HUD calculating median cell solidity, percentage of non-convex cells, and disconnected cell rate to continuously verify departure from Power (Laguerre) and Apollonius diagram families.
+See [reproduction instructions](../REPRODUCIBILITY.md) for the test page, report import, measured configurations and paper build.

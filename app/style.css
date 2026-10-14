@@ -297,7 +297,7 @@ body {
 }
 
 .viewport-toolbar {
-    height: 34px;
+    min-height: 34px;
     background: var(--studio-panel);
     border-bottom: 1px solid var(--studio-border);
     display: flex;
@@ -310,6 +310,7 @@ body {
 
 .viewport-modes {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
 }
 

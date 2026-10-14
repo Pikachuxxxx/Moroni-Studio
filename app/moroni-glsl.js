@@ -1,446 +1,169 @@
-/**
- * MORONI WebGL Shader Engine
- * Real-time GPU implementation of MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields
- * Renders the 3-term energy function in parallel at 60+ FPS on consumer GPUs:
- *   E_c(x) = alpha * d_c + beta * s_c(x) + gamma * (1 - cos(kappa*theta + lambda*d_c))
+/* Finite-field WebGL2 renderer. The CPU-generated polygon buffer is authoritative.
+ * Complete candidate scan with conservative rejection; no fixed spatial stencil.
+ * GPU timer queries are optional. Host submission time is never called GPU time.
  */
-
-const VERTEX_SHADER_SRC = `#version 300 es
+const VERTEX_SHADER_SRC=`#version 300 es
 in vec2 a_position;
 out vec2 v_uv;
-
-void main() {
-    v_uv = (a_position + 1.0) * 0.5;
-    gl_Position = vec4(a_position, 0.0, 1.0);
-}
-`;
-
-const FRAGMENT_SHADER_SRC = `#version 300 es
+void main(){v_uv=(a_position+1.)*.5;gl_Position=vec4(a_position,0.,1.);}`;
+const FRAGMENT_SHADER_SRC=`#version 300 es
 precision highp float;
 precision highp int;
-
+uniform highp sampler2D u_cells;
+uniform int u_count,u_mode,u_samples;
+uniform vec2 u_resolution;
+uniform vec4 u_bbox;
+uniform float u_alpha,u_beta,u_gamma,u_kappa,u_lambda,u_margin,u_radius,u_spacing,u_split_pos;
+uniform bool u_use_margin,u_show_wireframe,u_prune;
+uniform vec3 u_grout_color;
 in vec2 v_uv;
 out vec4 fragColor;
-
-uniform vec2 u_resolution;
-uniform float u_time;
-uniform int u_mode;          // 0: Shaded/Color, 1: Normal Map, 2: Height Map, 3: Grout/Roughness, 4: dc, 5: sc, 6: phase, 7: split comparison
-uniform float u_split_pos;   // 0.0 to 1.0 for A/B split comparison
-
-// Grid & Cell parameters
-uniform int u_rows;
-uniform int u_cols;
-uniform float u_spacing;
-uniform float u_radius;
-uniform float u_jitter;
-uniform int u_sides;         // 3, 4, 5, 6, 8, or 0 (varied)
-uniform float u_seed;
-
-// Energy weights
-uniform float u_alpha;       // Center distance weight
-uniform float u_beta;        // Polygon SDF weight
-uniform float u_gamma;       // Fracture phase weight
-uniform float u_kappa;       // Phase angular harmonic (typically 2.0 or 3.0)
-uniform float u_lambda;      // Phase radial frequency (typically 1.0)
-uniform float u_margin;      // Grout / Mortar threshold
-uniform bool u_use_margin;   // Toggle grout release vs full space-filling partition
-
-// Visual styling
-uniform vec3 u_grout_color;
-uniform float u_edge_dark;
-uniform bool u_show_wireframe;
-
-#define PI 3.14159265358979323846
-#define MAX_SIDES 12
-
-// Hash functions for pseudo-random generation on GPU
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031 + u_seed);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+struct Result {int id;float energy;float sc;float dc;float phase;bool grout;};
+float sdPolygon(vec2 p,int c,int n){
+    float d=1e20;bool inside=false;
+    vec2 a=texelFetch(u_cells,ivec2(n,c),0).xy;
+    for(int k=0;k<12;k++){
+        if(k>=n)break;
+        vec2 b=texelFetch(u_cells,ivec2(k+1,c),0).xy;
+        vec2 e=b-a,w=p-a;
+        float t=clamp(dot(w,e)/max(dot(e,e),1e-30),0.,1.);
+        d=min(d,length(w-t*e));
+        if((a.y>p.y)!=(b.y>p.y))
+            if(p.x<a.x+(p.y-a.y)*e.x/e.y)inside=!inside;
+        a=b;
+    }
+    return inside ? -d:d;
 }
-
-vec2 hash22(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973) + u_seed);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.xx + p3.yz) * p3.zy);
+Result evaluate(vec2 p,bool vor){
+    Result best=Result(0,1e30,0.,0.,0.,false);
+    for(int c=0;c<256;c++){
+        if(c>=u_count)break;
+        vec4 cell=texelFetch(u_cells,ivec2(0,c),0);
+        vec2 delta=p-cell.xy;float dc=length(delta);
+        float lower=vor ? dc:(u_alpha+u_beta)*dc-u_beta*cell.z;
+        // Slack protects near ties from small rounding errors; validation reports
+        // float32 disagreement separately from the real-arithmetic bound.
+        if(u_prune && lower>best.energy+1e-5*(1.+abs(best.energy)))continue;
+        float sc=sdPolygon(delta,c,int(cell.w));
+        float ph=dc<1e-6 ? 0.:1.-cos(u_kappa*atan(delta.y,delta.x)+u_lambda*dc);
+        float e=vor ? dc:u_alpha*dc+u_beta*sc+u_gamma*ph;
+        if(e<best.energy)best=Result(c,e,sc,dc,ph,false);
+    }
+    best.grout=u_use_margin && best.sc>u_margin;
+    return best;
 }
-
-// Signed distance to regular/jittered polygon
-// Negative inside, positive outside
-float sdPolygon(vec2 p, int n, float r, vec2 cellCoord) {
-    float dmin = 1e6;
-    bool inside = false;
-    
-    // Evaluate line segments of the jittered root polygon
-    vec2 prevV = vec2(0.0);
-    vec2 firstV = vec2(0.0);
-    float fn = float(n);
-    
-    for (int i = 0; i < MAX_SIDES; i++) {
-        if (i >= n) break;
-        float fi = float(i);
-        float th = 2.0 * PI * fi / fn;
-        // Angular jitter
-        float jit = (hash12(cellCoord + vec2(fi * 1.31, fi * 0.77)) - 0.5) * 2.0 * u_jitter;
-        th += jit;
-        
-        // Radial perturbation
-        float r_jit = r * (0.92 + 0.16 * hash12(cellCoord + vec2(fi * 0.53, fi * 2.11)));
-        vec2 currV = r_jit * vec2(cos(th), sin(th));
-        
-        if (i == 0) {
-            firstV = currV;
-        } else {
-            // Distance from p to segment (prevV -> currV)
-            vec2 e = currV - prevV;
-            vec2 w = p - prevV;
-            float t = clamp(dot(w, e) / (dot(e, e) + 1e-8), 0.0, 1.0);
-            float dist = length(w - e * t);
-            dmin = min(dmin, dist);
-            
-            // Ray-crossing parity test (Jordan curve theorem)
-            if (((prevV.y <= p.y && p.y < currV.y) || (currV.y <= p.y && p.y < prevV.y)) &&
-                (p.x < (currV.x - prevV.x) * (p.y - prevV.y) / (currV.y - prevV.y + 1e-8) + prevV.x)) {
-                inside = !inside;
-            }
-        }
-        prevV = currV;
-    }
-    
-    // Final closing segment
-    vec2 e = firstV - prevV;
-    vec2 w = p - prevV;
-    float t = clamp(dot(w, e) / (dot(e, e) + 1e-8), 0.0, 1.0);
-    float dist = length(w - e * t);
-    dmin = min(dmin, dist);
-    if (((prevV.y <= p.y && p.y < firstV.y) || (firstV.y <= p.y && p.y < prevV.y)) &&
-        (p.x < (firstV.x - prevV.x) * (p.y - prevV.y) / (firstV.y - prevV.y + 1e-8) + prevV.x)) {
-        inside = !inside;
-    }
-    
-    return inside ? -dmin : dmin;
+float heightAt(Result e){return e.grout ? 0.:sqrt(clamp(-e.sc/u_radius,0.,1.));}
+vec3 palette(int id){
+    return texelFetch(u_cells,ivec2(13,id),0).rgb;
 }
-
-// Generate distinct procedural color per cell ID
-vec3 cellColor(vec2 cellId) {
-    float h = fract(sin(dot(cellId, vec2(12.9898, 78.233))) * 43758.5453);
-    float s = 0.55 + 0.25 * fract(sin(dot(cellId, vec2(93.989, 67.345))) * 23145.21);
-    float v = 0.80 + 0.18 * fract(sin(dot(cellId, vec2(45.123, 19.876))) * 87654.32);
-    
-    // HSV to RGB
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(vec3(h) + K.xyz) * 6.0 - K.www);
-    return v * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), s);
+vec3 shade(vec2 p,bool vor){
+    Result e=evaluate(p,vor);
+    if(u_mode==8){int id=e.grout ? 0:e.id+1;return vec3(float(id%256),float(id/256),0.)/255.;}
+    if(u_mode==4)return vec3(clamp(e.dc/u_spacing,0.,1.));
+    if(u_mode==5)return mix(vec3(1.),e.sc<0.?vec3(.1,.3,.9):vec3(.9,.2,.1),clamp(abs(e.sc)/u_radius,0.,1.));
+    if(u_mode==6)return vec3(e.phase*.5);
+    if(u_mode==2)return vec3(heightAt(e));
+    if(u_mode==3)return vec3(e.grout ? .95:.25);
+    if(u_mode==1){
+        float eps=.005*u_spacing;
+        float dx=(heightAt(evaluate(p+vec2(eps,0.),vor))-heightAt(evaluate(p-vec2(eps,0.),vor)))/(2.*eps);
+        float dy=(heightAt(evaluate(p+vec2(0.,eps),vor))-heightAt(evaluate(p-vec2(0.,eps),vor)))/(2.*eps);
+        // World-height scale .06*spacing; +Y is downward in the exported image.
+        return normalize(vec3(-dx*.06*u_spacing,-dy*.06*u_spacing,1.))*.5+.5;
+    }
+    if(u_show_wireframe && abs(e.sc)<.008*u_spacing)return vec3(.1);
+    return e.grout ? vec3(.07):palette(e.id); // Shared unlit paper palette.
 }
-
-// Algebraic phase interference for kappa=2
-// 1 - cos(2*theta + lambda*d) = 1 - [(dx^2 - dy^2)*cos(lambda*d) - 2*dx*dy*sin(lambda*d)] / (d^2)
-float phaseInterference(vec2 d, float dc, float kappa, float lam) {
-    if (abs(kappa - 2.0) < 0.01) {
-        float d2 = dot(d, d) + 1e-8;
-        float cl = cos(lam * dc);
-        float sl = sin(lam * dc);
-        return 1.0 - ((d.x * d.x - d.y * d.y) * cl - 2.0 * d.x * d.y * sl) / d2;
-    } else {
-        float theta = atan(d.y, d.x);
-        return 1.0 - cos(kappa * theta + lam * dc);
-    }
-}
-
-// Evaluate MORONI energy at point p
-struct EvalResult {
-    vec2 bestCell;
-    float bestEnergy;
-    float dc;
-    float sc;
-    float phase;
-    bool isGrout;
-};
-
-EvalResult evaluateField(vec2 p, bool forceVoronoi) {
-    EvalResult res;
-    res.bestEnergy = 1e8;
-    res.bestCell = vec2(0.0);
-    res.dc = 0.0;
-    res.sc = 0.0;
-    res.phase = 0.0;
-    res.isGrout = false;
-    
-    vec2 baseGrid = floor(p / u_spacing);
-    
-    // 5x5 neighborhood search window guarantees admissible bound coverage
-    for (int dy = -2; dy <= 2; dy++) {
-        for (int dx = -2; dx <= 2; dx++) {
-            vec2 g = baseGrid + vec2(float(dx), float(dy));
-            
-            // Jittered cell center
-            vec2 jitterOffset = (hash22(g) - 0.5) * 2.0 * (0.13 * u_spacing);
-            vec2 center = (g + 0.5) * u_spacing + jitterOffset;
-            
-            vec2 delta = p - center;
-            float dc = length(delta);
-            
-            float energy = 0.0;
-            float sc = 0.0;
-            float ph = 0.0;
-            
-            if (forceVoronoi) {
-                // Classic Voronoi baseline
-                energy = dc;
-            } else {
-                // Determine vertex count for this cell
-                int sides = u_sides;
-                if (sides == 0) {
-                    // Varied between 5 and 8
-                    sides = 5 + int(hash12(g * 7.13) * 4.0);
-                }
-                
-                sc = sdPolygon(delta, sides, u_radius, g);
-                ph = phaseInterference(delta, dc, u_kappa, u_lambda);
-                
-                energy = u_alpha * dc + u_beta * sc + u_gamma * ph;
-            }
-            
-            if (energy < res.bestEnergy) {
-                res.bestEnergy = energy;
-                res.bestCell = g;
-                res.dc = dc;
-                res.sc = sc;
-                res.phase = ph;
-            }
-        }
-    }
-    
-    if (!forceVoronoi && u_use_margin && res.sc > u_margin) {
-        res.isGrout = true;
-    }
-    
-    return res;
-}
-
-float computeDomeHeight(float sc, bool isGrout, float radius) {
-    if (isGrout) return 0.0;
-    float h = clamp(-sc / radius, 0.0, 1.0);
-    return sqrt(h); // Dome profile
-}
-
-void main() {
-    // Transform UV to world coordinates
-    float aspect = u_resolution.x / u_resolution.y;
-    vec2 p = v_uv * vec2(float(u_cols), float(u_rows)) * u_spacing;
-    
-    bool forceVoronoi = false;
-    if (u_mode == 7) {
-        // Split comparison: Left is Voronoi, Right is MORONI
-        if (v_uv.x < u_split_pos) {
-            forceVoronoi = true;
-        }
-    }
-    
-    EvalResult ev = evaluateField(p, forceVoronoi);
-    
-    // Check if pixel is on the split line
-    if (u_mode == 7 && abs(v_uv.x - u_split_pos) < 0.002) {
-        fragColor = vec4(1.0, 1.0, 1.0, 1.0);
-        return;
-    }
-    
-    // Mode 4: Inspect dc (center distance)
-    if (u_mode == 4) {
-        float val = clamp(ev.dc / (u_spacing * 1.2), 0.0, 1.0);
-        fragColor = vec4(vec3(val), 1.0);
-        return;
-    }
-    
-    // Mode 5: Inspect sc (polygon signed field)
-    if (u_mode == 5) {
-        // Red for outside, Blue for inside
-        float norm_s = clamp(abs(ev.sc) / u_radius, 0.0, 1.0);
-        vec3 col = (ev.sc < 0.0) ? mix(vec3(0.1, 0.3, 0.9), vec3(1.0), 1.0 - norm_s)
-                                 : mix(vec3(0.9, 0.2, 0.1), vec3(1.0), 1.0 - norm_s);
-        if (abs(ev.sc) < 0.015) col = vec3(0.0); // Zero-level set contour
-        fragColor = vec4(col, 1.0);
-        return;
-    }
-    
-    // Mode 6: Inspect Phase Interference term
-    if (u_mode == 6) {
-        float val = clamp(ev.phase * 0.5, 0.0, 1.0);
-        fragColor = vec4(vec3(val), 1.0);
-        return;
-    }
-
-    // Mode 2: Height / Displacement Map
-    if (u_mode == 2) {
-        float h = computeDomeHeight(ev.sc, ev.isGrout, u_radius);
-        fragColor = vec4(vec3(h), 1.0);
-        return;
-    }
-    
-    // Mode 3: Grout / Roughness Map
-    if (u_mode == 3) {
-        float g = ev.isGrout ? 1.0 : 0.15;
-        fragColor = vec4(vec3(g), 1.0);
-        return;
-    }
-    
-    // Mode 1: Normal Map (Screen-space / analytical derivative approximation)
-    if (u_mode == 1) {
-        vec2 eps = vec2(0.01 * u_spacing, 0.0);
-        EvalResult ev_rx = evaluateField(p + eps.xy, forceVoronoi);
-        EvalResult ev_lx = evaluateField(p - eps.xy, forceVoronoi);
-        EvalResult ev_uy = evaluateField(p + eps.yx, forceVoronoi);
-        EvalResult ev_dy = evaluateField(p - eps.yx, forceVoronoi);
-        
-        float h_rx = computeDomeHeight(ev_rx.sc, ev_rx.isGrout, u_radius);
-        float h_lx = computeDomeHeight(ev_lx.sc, ev_lx.isGrout, u_radius);
-        float h_uy = computeDomeHeight(ev_uy.sc, ev_uy.isGrout, u_radius);
-        float h_dy = computeDomeHeight(ev_dy.sc, ev_dy.isGrout, u_radius);
-        
-        float dx = (h_rx - h_lx) * 4.0;
-        float dy = (h_uy - h_dy) * 4.0;
-        vec3 normal = normalize(vec3(-dx, -dy, 1.0));
-        
-        // Encode normal [-1, 1] to [0, 1] RGB
-        vec3 normalRgb = normal * 0.5 + 0.5;
-        fragColor = vec4(normalRgb, 1.0);
-        return;
-    }
-    
-    // Mode 0 & Mode 7 (Shaded Texture Color)
-    if (ev.isGrout) {
-        fragColor = vec4(u_grout_color, 1.0);
-    } else {
-        vec3 col = cellColor(ev.bestCell);
-        
-        // Edge detection via screen-space gradient
-        vec2 eps = vec2(0.015 * u_spacing, 0.0);
-        EvalResult ev_rx = evaluateField(p + eps.xy, forceVoronoi);
-        EvalResult ev_uy = evaluateField(p + eps.yx, forceVoronoi);
-        
-        if (ev_rx.bestCell != ev.bestCell || ev_uy.bestCell != ev.bestCell ||
-            ev_rx.isGrout || ev_uy.isGrout) {
-            col *= u_edge_dark;
-        }
-        
-        // Subtle height shading
-        float h = clamp(-ev.sc / u_radius, 0.0, 1.0);
-        col *= (0.75 + 0.35 * sqrt(h));
-        
-        fragColor = vec4(col, 1.0);
-    }
-}
-`;
+void main(){
+    vec2 uv=vec2(v_uv.x,1.-v_uv.y);
+    vec2 span=vec2(u_bbox.y-u_bbox.x,u_bbox.w-u_bbox.z);
+    vec2 p=vec2(u_bbox.x,u_bbox.z)+uv*span;
+    bool vor=u_mode==7 && uv.x<u_split_pos;
+    vec3 c;
+    if(u_samples==4 && u_mode!=8){
+        vec2 d=span/u_resolution*.25;
+        c=.25*(shade(p+d,vor)+shade(p-d,vor)+shade(p+vec2(d.x,-d.y),vor)+shade(p+vec2(-d.x,d.y),vor));
+    }else c=shade(p,vor);
+    if(u_mode==7 && abs(uv.x-u_split_pos)<.002)c=vec3(1.);
+    fragColor=vec4(c,1.);
+}`;
 
 class MoroniGLRenderer {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.gl = canvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true });
-        if (!this.gl) {
-            console.error('WebGL2 not supported, fallback needed.');
-            this.gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
-        }
-        this.program = null;
-        this.quadVao = null;
-        this.uniforms = {};
-        this.initGL();
+    constructor(canvas){
+        this.canvas=canvas;
+        this.gl=canvas.getContext('webgl2',{antialias:false,preserveDrawingBuffer:true});
+        if(!this.gl)throw new Error('WebGL2 unavailable');
+        const gl=this.gl;
+        const vs=this.compile(gl.VERTEX_SHADER,VERTEX_SHADER_SRC),fs=this.compile(gl.FRAGMENT_SHADER,FRAGMENT_SHADER_SRC);
+        this.program=gl.createProgram();gl.attachShader(this.program,vs);gl.attachShader(this.program,fs);gl.linkProgram(this.program);
+        if(!gl.getProgramParameter(this.program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(this.program));
+        this.vao=gl.createVertexArray();gl.bindVertexArray(this.vao);
+        const vbo=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+        const loc=gl.getAttribLocation(this.program,'a_position');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+        this.texture=gl.createTexture();this.uniforms={};this.pending=[];this.gpuMs=null;
+        this.timer=gl.getExtension('EXT_disjoint_timer_query_webgl2');
+        this.timingSamples=[];this.disjointSamples=0;
     }
-
-    initGL() {
-        const gl = this.gl;
-        if (!gl) return;
-
-        const vs = this.compileShader(gl.VERTEX_SHADER, VERTEX_SHADER_SRC);
-        const fs = this.compileShader(gl.FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
-
-        this.program = gl.createProgram();
-        gl.attachShader(this.program, vs);
-        gl.attachShader(this.program, fs);
-        gl.linkProgram(this.program);
-
-        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-            console.error('Shader link error:', gl.getProgramInfoLog(this.program));
-            return;
+    compile(type,source){const gl=this.gl,s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);
+        if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+    uniform(name){return this.uniforms[name]??(this.uniforms[name]=this.gl.getUniformLocation(this.program,name));}
+    setField(params){
+        const key=JSON.stringify(['rows','cols','spacing','radius','jitter','sides','seed'].map(k=>params[k]));
+        if(key===this.fieldKey)return;
+        this.fieldKey=key;this.field=MoroniCore.buildCellField(params);
+        const f=this.field,data=new Float32Array(14*f.centers.length*4),colors=MoroniCore.cellColors(f.centers.length);
+        f.centers.forEach((c,i)=>{
+            data.set([c[0],c[1],f.radii[i]+1e-6,f.polys[i].length],i*56);
+            f.polys[i].forEach((v,j)=>data.set([v[0]-c[0],v[1]-c[1],0,0],i*56+4*(j+1)));
+            data.set([...colors[i],1],i*56+52);
+        });
+        const gl=this.gl;gl.bindTexture(gl.TEXTURE_2D,this.texture);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,14,f.centers.length,0,gl.RGBA,gl.FLOAT,data);
+    }
+    pollTiming(){
+        const gl=this.gl;if(!this.timer)return;
+        if(gl.getParameter(this.timer.GPU_DISJOINT_EXT)){
+            this.disjointSamples+=this.pending.length;this.pending.forEach(q=>gl.deleteQuery(q));this.pending=[];this.gpuMs=null;return;
         }
-
-        // Fullscreen quad
-        const positions = new Float32Array([
-            -1.0, -1.0,
-             1.0, -1.0,
-            -1.0,  1.0,
-            -1.0,  1.0,
-             1.0, -1.0,
-             1.0,  1.0
-        ]);
-
-        const vbo = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-        const posAttr = gl.getAttribLocation(this.program, 'a_position');
-        gl.enableVertexAttribArray(posAttr);
-        gl.vertexAttribPointer(posAttr, 2, gl.FLOAT, false, 0, 0);
-
-        // Cache uniform locations
-        const uniformNames = [
-            'u_resolution', 'u_time', 'u_mode', 'u_split_pos',
-            'u_rows', 'u_cols', 'u_spacing', 'u_radius', 'u_jitter', 'u_sides', 'u_seed',
-            'u_alpha', 'u_beta', 'u_gamma', 'u_kappa', 'u_lambda', 'u_margin', 'u_use_margin',
-            'u_grout_color', 'u_edge_dark', 'u_show_wireframe'
-        ];
-        for (const name of uniformNames) {
-            this.uniforms[name] = gl.getUniformLocation(this.program, name);
+        while(this.pending.length && gl.getQueryParameter(this.pending[0],gl.QUERY_RESULT_AVAILABLE)){
+            const q=this.pending.shift();this.gpuMs=gl.getQueryParameter(q,gl.QUERY_RESULT)/1e6;
+            this.timingSamples.push(this.gpuMs);if(this.timingSamples.length>1000)this.timingSamples.shift();gl.deleteQuery(q);
         }
     }
-
-    compileShader(type, src) {
-        const gl = this.gl;
-        const shader = gl.createShader(type);
-        gl.shaderSource(shader, src);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.error('Shader compile error:', gl.getShaderInfoLog(shader));
-        }
-        return shader;
+    render(p,time=0,options={}){
+        const gl=this.gl;this.setField(p);this.pollTiming();
+        const width=options.width??this.canvas.width,height=options.height??this.canvas.height;
+        gl.bindFramebuffer(gl.FRAMEBUFFER,options.framebuffer??null);gl.viewport(0,0,width,height);
+        gl.useProgram(this.program);gl.bindVertexArray(this.vao);gl.disable(gl.DITHER);
+        gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.uniform('u_cells'),0);
+        gl.uniform1i(this.uniform('u_count'),this.field.centers.length);gl.uniform4fv(this.uniform('u_bbox'),this.field.bbox);
+        gl.uniform2f(this.uniform('u_resolution'),width,height);
+        const defaults={alpha:.58,beta:.32,gamma:.1,kappa:2,lambda:1,margin:.03,radius:.5,spacing:.9,split_pos:.5};
+        for(const [k,v] of Object.entries(defaults))gl.uniform1f(this.uniform('u_'+k),p[k==='split_pos'?'splitPos':k]??v);
+        gl.uniform1i(this.uniform('u_mode'),p.mode??0);gl.uniform1i(this.uniform('u_samples'),p.samples??1);
+        gl.uniform1i(this.uniform('u_use_margin'),p.useMargin??true);gl.uniform1i(this.uniform('u_show_wireframe'),p.showWireframe??false);
+        gl.uniform1i(this.uniform('u_prune'),p.prune??true);gl.uniform3fv(this.uniform('u_grout_color'),p.groutColor??[.12,.12,.12]);
+        let q=null;
+        if(this.timer && options.timing!==false && this.pending.length<8){q=gl.createQuery();gl.beginQuery(this.timer.TIME_ELAPSED_EXT,q);}
+        gl.drawArrays(gl.TRIANGLES,0,6);
+        if(q){gl.endQuery(this.timer.TIME_ELAPSED_EXT);this.pending.push(q);}
     }
-
-    render(params, time = 0.0) {
-        const gl = this.gl;
-        if (!gl || !this.program) return;
-
-        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        gl.useProgram(this.program);
-        gl.bindVertexArray(this.quadVao);
-
-        gl.uniform2f(this.uniforms['u_resolution'], this.canvas.width, this.canvas.height);
-        gl.uniform1f(this.uniforms['u_time'], time);
-        gl.uniform1i(this.uniforms['u_mode'], params.mode || 0);
-        gl.uniform1f(this.uniforms['u_split_pos'], params.splitPos !== undefined ? params.splitPos : 0.5);
-
-        gl.uniform1i(this.uniforms['u_rows'], params.rows ?? 8);
-        gl.uniform1i(this.uniforms['u_cols'], params.cols ?? 12);
-        gl.uniform1f(this.uniforms['u_spacing'], params.spacing ?? 0.9);
-        gl.uniform1f(this.uniforms['u_radius'], params.radius ?? 0.55);
-        gl.uniform1f(this.uniforms['u_jitter'], params.jitter ?? 0.2);
-        gl.uniform1i(this.uniforms['u_sides'], params.sides ?? 0);
-        gl.uniform1f(this.uniforms['u_seed'], params.seed ?? 22.0);
-
-        gl.uniform1f(this.uniforms['u_alpha'], params.alpha ?? 0.58);
-        gl.uniform1f(this.uniforms['u_beta'], params.beta ?? 0.32);
-        gl.uniform1f(this.uniforms['u_gamma'], params.gamma ?? 0.10);
-        gl.uniform1f(this.uniforms['u_kappa'], params.kappa ?? 2.0);
-        gl.uniform1f(this.uniforms['u_lambda'], params.lambda ?? 1.0);
-        gl.uniform1f(this.uniforms['u_margin'], params.margin ?? 0.03);
-        gl.uniform1i(this.uniforms['u_use_margin'], (params.useMargin ?? true) ? 1 : 0);
-
-        const gc = params.groutColor ?? [0.07, 0.07, 0.07];
-        gl.uniform3f(this.uniforms['u_grout_color'], gc[0], gc[1], gc[2]);
-        gl.uniform1f(this.uniforms['u_edge_dark'], params.edgeDark ?? 0.27);
-        gl.uniform1i(this.uniforms['u_show_wireframe'], params.showWireframe ? 1 : 0);
-
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    readLabels(params,width=180,height=120){
+        const gl=this.gl,fb=gl.createFramebuffer(),tex=gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D,tex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,width,height,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+        gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('Readback framebuffer incomplete');
+        this.render({...params,mode:8,samples:1},0,{width,height,framebuffer:fb,timing:false});
+        const pixels=new Uint8Array(width*height*4),labels=new Int32Array(width*height);
+        gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+        for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+            const j=((height-1-y)*width+x)*4;labels[y*width+x]=pixels[j]+256*pixels[j+1]-1;
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(fb);gl.deleteTexture(tex);
+        return {labels,width,height};
     }
 }
-
-window.MoroniGLRenderer = MoroniGLRenderer;
+window.MoroniGLRenderer=MoroniGLRenderer;
