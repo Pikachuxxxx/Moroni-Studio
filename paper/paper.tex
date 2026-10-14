@@ -47,10 +47,11 @@ capable of evaluating the complete formulation at 60+ FPS ($<0.8$\,ms at
 $1080$p, a $1296\times$ speedup over CPU), accompanied by an interactive
 companion studio with live PBR texture generation (diffuse, normal, height,
 roughness) and SVG vector export hosted publicly at
-\url{https://pikachuxxxx.github.io/Moroni-Studio/}. Full generator algorithms,
-analytical discretization error derivations, and an exhaustive comparative
-matrix contrasting practical benefits versus drawbacks against existing Voronoi
-formulations are provided in the appendix.
+\url{https://pikachuxxxx.github.io/Moroni-Studio/}, with full open-source code
+and benchmarks available at \url{https://github.com/Pikachuxxxx/Moroni-Studio}.
+Full generator algorithms, analytical discretization error derivations, and an
+exhaustive comparative matrix contrasting practical benefits versus drawbacks
+against existing Voronoi formulations are provided in the appendix.
 \end{abstract}
 
 \keywords{procedural texture, cellular noise, Voronoi, power diagram,
@@ -136,7 +137,9 @@ demonstrating linear $O(h)$ convergence and $<0.018\%$ pixel classification erro
 (\S\ref{sec:lut_eval}).
 \item A real-time GPU WebGL fragment shader running at 60+ FPS ($<0.8$\,ms at
 $1080$p) and a public interactive studio supporting full PBR map export
-(diffuse, normal, height, roughness) and vector SVG generation (\S\ref{sec:app}).
+(\url{https://pikachuxxxx.github.io/Moroni-Studio/}) with open-source reference
+code, verification suites, and GLSL shaders hosted on GitHub
+(\url{https://github.com/Pikachuxxxx/Moroni-Studio}) (\S\ref{sec:app}).
 \item A comprehensive appendix containing full generator pseudocode (Algorithms
 2--6) and a comparative feature/drawback matrix contrasting existing cellular
 schemes against MORONI (Appendix~\ref{sec:appendix_generators}).
@@ -626,10 +629,11 @@ hosted online:
 \fbox{\parbox{0.96\linewidth}{%
 \vspace{3pt}
 \centering
-\textbf{\large Interactive Online Laboratory \& Artifact Companion}\\[2pt]
-\url{https://pikachuxxxx.github.io/Moroni-Studio/}\\[4pt]
+\textbf{\large Interactive Online Studio \& Open-Source Repository}\\[3pt]
+\textbf{Live WebGL2 Studio:} \url{https://pikachuxxxx.github.io/Moroni-Studio/}\\[2pt]
+\textbf{GitHub Repository:} \url{https://github.com/Pikachuxxxx/Moroni-Studio}\\[4pt]
 \raggedright\small
-\emph{A zero-dependency, open-source WebGL2 studio executing MORONI at 60+ FPS ($<0.8$\,ms at $1080$p). Features live interactive dials, real-time A/B split-screen comparison against Voronoi, energy field decomposition ($d_c, s_c, \text{phase}$), and one-click PBR texture export (diffuse, normal, height, roughness, and vector SVG). Source code and local offline server instructions are included in the submission artifact.}
+\emph{A zero-dependency, open-source WebGL2 studio executing MORONI at 60+ FPS ($<0.8$\,ms at $1080$p). Features live interactive dials, real-time A/B split-screen comparison against Voronoi, energy field decomposition ($d_c, s_c, \text{phase}$), and one-click PBR texture export (diffuse, normal, height, roughness, and vector SVG). Full reference implementations and reproduction harnesses are available in the repository.}
 \vspace{3pt}
 }}
 \end{center}
@@ -663,6 +667,17 @@ finite differences on the interior signed field), Height/Displacement map, and
 Roughness/Grout mask, exportable up to 2K resolution alongside SVG vector contours.
 \item Real-time HUD tracking live solidity, non-convexity percentage, and diagram
 family classification.
+\end{itemize}
+
+\subsection{Code Availability and Verifiable Proofs}
+To provide verifiable proof and enable end-to-end reproduction of all claims, all
+code and experimental pipelines are publicly available under the MIT license at
+\url{https://github.com/Pikachuxxxx/Moroni-Studio}. Key components include:
+\begin{itemize}
+\item \textbf{Reference CPU Pipeline:} \path{src/moroni.py} and top-level \path{moroni.py} implement exact bounding-radius pruning, jittered lattice ring escalation, and trigonometric elimination.
+\item \textbf{Real-Time GPU Shaders:} \path{app/moroni-glsl.js} contains the standalone WebGL2 GLSL fragment shader computing analytical polygon SDFs and angular phase modulation per fragment.
+\item \textbf{Benchmark Harness:} \path{benchmarks/experiments.py} executes all latency, exact bound pruning, and ablation tests.
+\item \textbf{Validation Suite:} \path{benchmarks/lut_and_baselines_eval.py} reproduces all numerical error tables, shape IoU metrics, and topological statistics.
 \end{itemize}
 
 \section{CPU Performance Benchmarks}
