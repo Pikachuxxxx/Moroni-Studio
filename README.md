@@ -4,7 +4,7 @@ A finite cellular texture recipe that combines center distance, polygon signed d
 
 - [Studio](https://pikachuxxxx.github.io/Moroni-Studio/) (the published site updates only when these changes are deployed)
 - [Revised manuscript](paper/paper.pdf) and [LaTeX source](paper/paper.tex)
-- [Reproduction instructions](REPRODUCIBILITY.md) and [review resolutions](REVIEW_RESOLUTION.txt)
+- [Reproduction instructions](REPRODUCIBILITY.md)
 
 ![Polygon targets, full assignment, and clipping](paper/figures/shape_control.png)
 
