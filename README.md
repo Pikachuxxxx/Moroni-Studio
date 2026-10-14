@@ -1,7 +1,7 @@
 # MORONI Studio — Interactive WebGL Cellular Texture Generator
 
 An interactive companion application to the paper:
-**"MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields"**
+**"MORONI: Polygon-Guided Cellular Textures via Roots-of-Unity Polygons and Phase-Modulated Boundaries"**
 *Phani Srikar*
 
 ---
@@ -42,7 +42,7 @@ Open [http://localhost:8080](http://localhost:8080) in any modern browser (Chrom
 4. **PBR Texture Studio & Exporter**:
    - Generates and exports production-ready textures up to 2K resolution:
      - **Diffuse / Color Map** (PNG)
-     - **Tangent-Space Normal Map** (Sobel derivative filter, PNG)
+     - **Tangent-Space Normal Map** (Central finite differences, PNG)
      - **Height / Displacement Map** (Smooth dome interior SDF profile, PNG)
      - **Roughness / Grout Mask** (PNG)
      - **SVG Vector Contours** (Clean vector polygons)

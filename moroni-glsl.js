@@ -69,19 +69,12 @@ vec2 hash22(vec2 p) {
 // Negative inside, positive outside
 float sdPolygon(vec2 p, int n, float r, vec2 cellCoord) {
     float dmin = 1e6;
-    float insideSign = 1.0;
-    
-    // Check inside via winding/cross product
-    // For star-convex jittered roots of unity:
-    float angle = atan(p.y, p.x);
-    if (angle < 0.0) angle += 2.0 * PI;
+    bool inside = false;
     
     // Evaluate line segments of the jittered root polygon
     vec2 prevV = vec2(0.0);
     vec2 firstV = vec2(0.0);
-    
     float fn = float(n);
-    bool inside = true;
     
     for (int i = 0; i < MAX_SIDES; i++) {
         if (i >= n) break;
@@ -91,7 +84,7 @@ float sdPolygon(vec2 p, int n, float r, vec2 cellCoord) {
         float jit = (hash12(cellCoord + vec2(fi * 1.31, fi * 0.77)) - 0.5) * 2.0 * u_jitter;
         th += jit;
         
-        // Slight radial perturbation
+        // Radial perturbation
         float r_jit = r * (0.92 + 0.16 * hash12(cellCoord + vec2(fi * 0.53, fi * 2.11)));
         vec2 currV = r_jit * vec2(cos(th), sin(th));
         
@@ -105,9 +98,10 @@ float sdPolygon(vec2 p, int n, float r, vec2 cellCoord) {
             float dist = length(w - e * t);
             dmin = min(dmin, dist);
             
-            // Cross product check for convexity orientation
-            if ((e.x * w.y - e.y * w.x) < 0.0) {
-                inside = false;
+            // Ray-crossing parity test (Jordan curve theorem)
+            if (((prevV.y <= p.y && p.y < currV.y) || (currV.y <= p.y && p.y < prevV.y)) &&
+                (p.x < (currV.x - prevV.x) * (p.y - prevV.y) / (currV.y - prevV.y + 1e-8) + prevV.x)) {
+                inside = !inside;
             }
         }
         prevV = currV;
@@ -119,8 +113,9 @@ float sdPolygon(vec2 p, int n, float r, vec2 cellCoord) {
     float t = clamp(dot(w, e) / (dot(e, e) + 1e-8), 0.0, 1.0);
     float dist = length(w - e * t);
     dmin = min(dmin, dist);
-    if ((e.x * w.y - e.y * w.x) < 0.0) {
-        inside = false;
+    if (((prevV.y <= p.y && p.y < firstV.y) || (firstV.y <= p.y && p.y < prevV.y)) &&
+        (p.x < (firstV.x - prevV.x) * (p.y - prevV.y) / (firstV.y - prevV.y + 1e-8) + prevV.x)) {
+        inside = !inside;
     }
     
     return inside ? -dmin : dmin;
@@ -269,16 +264,15 @@ void main() {
         return;
     }
     
+float computeDomeHeight(float sc, bool isGrout, float radius) {
+    if (isGrout) return 0.0;
+    float h = clamp(-sc / radius, 0.0, 1.0);
+    return sqrt(h); // Dome profile
+}
+
     // Mode 2: Height / Displacement Map
     if (u_mode == 2) {
-        float h = 0.0;
-        if (ev.isGrout) {
-            h = 0.0;
-        } else {
-            // Convex height profile based on negative distance inside
-            h = clamp(-ev.sc / u_radius, 0.0, 1.0);
-            h = sqrt(h); // Dome profile
-        }
+        float h = computeDomeHeight(ev.sc, ev.isGrout, u_radius);
         fragColor = vec4(vec3(h), 1.0);
         return;
     }
@@ -298,11 +292,10 @@ void main() {
         EvalResult ev_uy = evaluateField(p + eps.yx, forceVoronoi);
         EvalResult ev_dy = evaluateField(p - eps.yx, forceVoronoi);
         
-        float h_c = ev.isGrout ? 0.0 : clamp(-ev.sc / u_radius, 0.0, 1.0);
-        float h_rx = ev_rx.isGrout ? 0.0 : clamp(-ev_rx.sc / u_radius, 0.0, 1.0);
-        float h_lx = ev_lx.isGrout ? 0.0 : clamp(-ev_lx.sc / u_radius, 0.0, 1.0);
-        float h_uy = ev_uy.isGrout ? 0.0 : clamp(-ev_uy.sc / u_radius, 0.0, 1.0);
-        float h_dy = ev_dy.isGrout ? 0.0 : clamp(-ev_dy.sc / u_radius, 0.0, 1.0);
+        float h_rx = computeDomeHeight(ev_rx.sc, ev_rx.isGrout, u_radius);
+        float h_lx = computeDomeHeight(ev_lx.sc, ev_lx.isGrout, u_radius);
+        float h_uy = computeDomeHeight(ev_uy.sc, ev_uy.isGrout, u_radius);
+        float h_dy = computeDomeHeight(ev_dy.sc, ev_dy.isGrout, u_radius);
         
         float dx = (h_rx - h_lx) * 4.0;
         float dy = (h_uy - h_dy) * 4.0;
@@ -423,25 +416,25 @@ class MoroniGLRenderer {
         gl.uniform1i(this.uniforms['u_mode'], params.mode || 0);
         gl.uniform1f(this.uniforms['u_split_pos'], params.splitPos !== undefined ? params.splitPos : 0.5);
 
-        gl.uniform1i(this.uniforms['u_rows'], params.rows || 8);
-        gl.uniform1i(this.uniforms['u_cols'], params.cols || 12);
-        gl.uniform1f(this.uniforms['u_spacing'], params.spacing || 0.9);
-        gl.uniform1f(this.uniforms['u_radius'], params.radius || 0.55);
-        gl.uniform1f(this.uniforms['u_jitter'], params.jitter || 0.2);
-        gl.uniform1i(this.uniforms['u_sides'], params.sides || 0);
-        gl.uniform1f(this.uniforms['u_seed'], params.seed || 22.0);
+        gl.uniform1i(this.uniforms['u_rows'], params.rows ?? 8);
+        gl.uniform1i(this.uniforms['u_cols'], params.cols ?? 12);
+        gl.uniform1f(this.uniforms['u_spacing'], params.spacing ?? 0.9);
+        gl.uniform1f(this.uniforms['u_radius'], params.radius ?? 0.55);
+        gl.uniform1f(this.uniforms['u_jitter'], params.jitter ?? 0.2);
+        gl.uniform1i(this.uniforms['u_sides'], params.sides ?? 0);
+        gl.uniform1f(this.uniforms['u_seed'], params.seed ?? 22.0);
 
-        gl.uniform1f(this.uniforms['u_alpha'], params.alpha || 0.58);
-        gl.uniform1f(this.uniforms['u_beta'], params.beta !== undefined ? params.beta : 0.32);
-        gl.uniform1f(this.uniforms['u_gamma'], params.gamma !== undefined ? params.gamma : 0.10);
-        gl.uniform1f(this.uniforms['u_kappa'], params.kappa || 2.0);
-        gl.uniform1f(this.uniforms['u_lambda'], params.lambda || 1.0);
-        gl.uniform1f(this.uniforms['u_margin'], params.margin !== undefined ? params.margin : 0.03);
-        gl.uniform1i(this.uniforms['u_use_margin'], params.useMargin ? 1 : 0);
+        gl.uniform1f(this.uniforms['u_alpha'], params.alpha ?? 0.58);
+        gl.uniform1f(this.uniforms['u_beta'], params.beta ?? 0.32);
+        gl.uniform1f(this.uniforms['u_gamma'], params.gamma ?? 0.10);
+        gl.uniform1f(this.uniforms['u_kappa'], params.kappa ?? 2.0);
+        gl.uniform1f(this.uniforms['u_lambda'], params.lambda ?? 1.0);
+        gl.uniform1f(this.uniforms['u_margin'], params.margin ?? 0.03);
+        gl.uniform1i(this.uniforms['u_use_margin'], (params.useMargin ?? true) ? 1 : 0);
 
-        const gc = params.groutColor || [0.07, 0.07, 0.07];
+        const gc = params.groutColor ?? [0.07, 0.07, 0.07];
         gl.uniform3f(this.uniforms['u_grout_color'], gc[0], gc[1], gc[2]);
-        gl.uniform1f(this.uniforms['u_edge_dark'], params.edgeDark || 0.27);
+        gl.uniform1f(this.uniforms['u_edge_dark'], params.edgeDark ?? 0.27);
         gl.uniform1i(this.uniforms['u_show_wireframe'], params.showWireframe ? 1 : 0);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
