@@ -17,6 +17,7 @@ void main() {
 
 const FRAGMENT_SHADER_SRC = `#version 300 es
 precision highp float;
+precision highp int;
 
 in vec2 v_uv;
 out vec4 fragColor;
@@ -410,6 +411,7 @@ class MoroniGLRenderer {
 
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         gl.useProgram(this.program);
+        gl.bindVertexArray(this.quadVao);
 
         gl.uniform2f(this.uniforms['u_resolution'], this.canvas.width, this.canvas.height);
         gl.uniform1f(this.uniforms['u_time'], time);
