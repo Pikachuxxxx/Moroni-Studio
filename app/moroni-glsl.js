@@ -218,6 +218,12 @@ EvalResult evaluateField(vec2 p, bool forceVoronoi) {
     return res;
 }
 
+float computeDomeHeight(float sc, bool isGrout, float radius) {
+    if (isGrout) return 0.0;
+    float h = clamp(-sc / radius, 0.0, 1.0);
+    return sqrt(h); // Dome profile
+}
+
 void main() {
     // Transform UV to world coordinates
     float aspect = u_resolution.x / u_resolution.y;
@@ -263,12 +269,6 @@ void main() {
         fragColor = vec4(vec3(val), 1.0);
         return;
     }
-    
-float computeDomeHeight(float sc, bool isGrout, float radius) {
-    if (isGrout) return 0.0;
-    float h = clamp(-sc / radius, 0.0, 1.0);
-    return sqrt(h); // Dome profile
-}
 
     // Mode 2: Height / Displacement Map
     if (u_mode == 2) {
