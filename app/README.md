@@ -1,7 +1,7 @@
 # MORONI Studio — Interactive WebGL Cellular Texture Generator
 
 An interactive companion application to the paper:
-**"Art-Directable Cellular Textures: Polygon Cells, Signed Boundary Fields, and Phase Interference"**
+**"MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields"**
 *Phani Srikar*
 
 ---
@@ -10,20 +10,19 @@ An interactive companion application to the paper:
 
 This app is a **zero-dependency, purely client-side WebGL2/HTML5 application**. It requires no build step, no Node.js/npm dependencies, and zero server infrastructure.
 
+- **Live URL**: [https://pikachuxxxx.github.io/Moroni-Studio/](https://pikachuxxxx.github.io/Moroni-Studio/)
+
 ### 1. Instant Local Preview
 To test or run locally:
 ```bash
-cd AI/moroni/app
+cd app
 python3 -m http.server 8080
 ```
 Open [http://localhost:8080](http://localhost:8080) in any modern browser (Chrome, Safari, Firefox, Edge).
 
-### 2. One-Click Hosting Options
-
+### 2. Hosting
 - **GitHub Pages**:
-  Push this folder or branch to GitHub, navigate to **Settings > Pages**, set the source to `/AI/moroni/app` (or `/docs`), and click **Save**. Your app will be live at `https://<username>.github.io/<repo>/`.
-- **Vercel / Netlify**:
-  Drag and drop the `AI/moroni/app` folder onto Vercel or Netlify Dashboard for an instant free HTTPS deployment.
+  The `gh-pages` branch serves this directory directly at `https://pikachuxxxx.github.io/Moroni-Studio/`.
 
 ---
 

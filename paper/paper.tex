@@ -8,8 +8,7 @@
 
 \begin{document}
 
-\title{Art-Directable Cellular Textures: Polygon Cells, Signed Boundary Fields,
-and Phase Interference}
+\title{MORONI: Cellular Texture and Fracture Synthesis via Roots-of-Unity Polygons and Signed Boundary Fields}
 
 \author{Phani Srikar}
 \affiliation{\institution{Independent Researcher}\city{}\country{}}
@@ -150,15 +149,15 @@ Procedural pattern synthesis in computer graphics spans gradient noise, cellular
 diagrams, distance fields, and physical simulation.
 
 \subsection{Procedural Noise Functions}
-Procedural noise began with Perlin's gradient noise~\cite{perlin1985}, later
-refined with Simplex noise and improved gradient distributions by Kensler et
-al.~\cite{kensler2008better}. Lagae et al.~\cite{lagae2009gabor} introduced Gabor
-noise, enabling exact spectral control via sparse convolution. Comprehensive
-surveys by Lagae et al.~\cite{lagae2010noise} and Ebert et al.~\cite{ebert2003}
-trace procedural texturing through modern physically based production
-systems~\cite{pbr4}. While gradient and Gabor noise excel at continuous, band-limited
-phenomena (clouds, marble, wood grain), they cannot natively synthesize piecewise
-partitions, cell boundaries, or sharp fracture cracks.
+Procedural noise began with Perlin's gradient noise~\cite{perlin1985}, followed
+by multi-scale spectral representations such as wavelet noise by Cook and
+DeRose~\cite{cook2005wavelet}. Lagae et al.~\cite{lagae2009gabor} introduced Gabor
+noise, enabling exact spectral control via sparse convolution. The comprehensive
+survey by Lagae et al.~\cite{lagae2010noise} traces procedural texturing
+through modern physically based production systems~\cite{pbr4}. While gradient
+and Gabor noise excel at continuous, band-limited phenomena (clouds, marble, wood
+grain), they cannot natively synthesize piecewise partitions, cell boundaries,
+or sharp fracture cracks.
 
 \subsection{Cellular Diagrams and Weighted Extensions}
 Cellular noise descends from Georgy Voronoi's 1908 treatise on quadratic
@@ -167,8 +166,8 @@ sweepline geometry for planar Voronoi diagrams. Lloyd~\cite{lloyd1982} introduce
 iterative centroidal Voronoi relaxation, widely adopted in graphics for stippling
 and remeshing. Steven Worley~\cite{worley1996} revolutionized shader texturing by
 introducing the cellular basis function $F_k(\mathbf{x})$, measuring distances
-to the $k$-th nearest feature points on a spatial grid, later implemented in
-GLSL by Gustavson~\cite{gustavson2012}.
+to the $k$-th nearest feature points on a spatial grid, later extended and mapped
+efficiently to GLSL by McEwan et al.~\cite{mcewan2012noise}.
 
 To provide size control, weighted Voronoi diagrams were introduced. In Power
 diagrams (Laguerre geometry)~\cite{aurenhammer1987power}, each site carries a
@@ -184,18 +183,18 @@ can synthesize non-convex shards or disconnected fracture lobes.
 Physical fracture modeling accurately simulates crack propagation using finite
 element methods (FEM) or boundary element methods (BEM). O'Brien and
 Hodgins~\cite{obrien1999fracture} established continuum mechanics fracture for
-graphics. Pfaff et al.~\cite{pfaff2014fracture} modeled adaptive tearing in thin
-sheets, and Nealen et al.~\cite{nealen2006survey} surveyed deformable models.
-While physically realistic, dynamic FEM/BEM simulations require minutes to hours
-of compute per frame, rendering them unusable for runtime fragment shaders.
+graphics. Desbenoit et al.~\cite{desbenoit2005cracks} modeled surface cracks and
+peeling patterns, and Nealen et al.~\cite{nealen2006survey} surveyed physically
+based deformable models. While physically realistic, dynamic FEM/BEM
+simulations require minutes to hours of compute per frame, rendering them
+unusable for runtime fragment shaders.
 
-Procedural crack generation offers a lightweight alternative. Iben and
-O'Brien~\cite{iben2009} synthesized surface crack patterns by relaxing 2D stress
-fields on surface meshes. Desbenoit et al. explored heuristic crack propagation.
-However, existing procedural crack methods operate globally over graph
-representations, preventing parallel, memory-free evaluation in per-pixel GPU
-shaders. MORONI achieves real-time procedural fracture directly in fragment
-shaders via angular phase interference.
+Procedural crack generation offers a lightweight alternative. Mould~\cite{mould2005fracture}
+synthesized image-guided surface crack patterns using shortest-path graph propagation
+on lattices. However, graph-based procedural crack methods operate globally over
+memory-resident topologies, preventing parallel, memory-free evaluation in
+per-pixel GPU shaders. MORONI achieves real-time procedural fracture directly
+in fragment shaders via angular phase interference.
 
 \subsection{Implicit Surfaces and Distance Fields}
 Distance transforms map discrete masks to continuous distance
@@ -210,11 +209,12 @@ polygon silhouettes.
 Controllability is the central challenge in procedural content generation (PCG).
 Smelik et al.~\cite{smelik2014survey} and Vanegas et
 al.~\cite{vanegas2010modelling} emphasize that procedural algorithms must provide
-intuitive, declarative handles rather than opaque mathematical parameters. Kelly
-and McCabe~\cite{kelly2011survey} surveyed procedural city modeling, showing that
-uncontrollable procedural primitives fail in commercial pipelines. MORONI
-specifically addresses controllability by exposing five orthogonal, intuitive
-dials: shape, size, irregularity, grout width, and fracture intensity.
+intuitive, declarative handles rather than opaque mathematical parameters.
+M{\"u}ller et al.~\cite{muller2006buildings} demonstrated rule-based grammar
+derivation for procedural architecture, showing that uncontrollable procedural
+primitives fail in commercial pipelines. MORONI specifically addresses
+controllability by exposing five orthogonal, intuitive dials: shape, size,
+irregularity, grout width, and fracture intensity.
 
 \section{Method}
 \label{sec:method}
